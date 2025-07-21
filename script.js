@@ -2,6 +2,8 @@ console.log("Dam Haji game loaded!");
 
 function initializeBoard() {
   const boardSize = 8;
+  const board = document.getElementById("game-board");
+  board.innerHTML = ''; // Clear any existing board
 
   for (let row = 0; row < boardSize; row++) {
     const rowElement = document.createElement("div");
@@ -9,6 +11,9 @@ function initializeBoard() {
     for (let col = 0; col < boardSize; col++) {
       const cell = document.createElement("div");
       cell.classList.add("board-cell");
+      cell.dataset.row = row;
+      cell.dataset.col = col;
+      
       if ((row + col) % 2 === 0) {
         cell.classList.add("light");
       } else {
@@ -406,11 +411,13 @@ if ('serviceWorker' in navigator) {
     console.log('Service worker registration attempted.');
     navigator.serviceWorker.register('./service-worker.js');
 
+    // Get board element first
+    const board = document.getElementById("game-board");
+    
     // Initialize game and update player display
     initializeBoard();
     updateCurrentPlayerDisplay();
 
-    const board = document.getElementById("game-board");
     board.querySelectorAll('.board-cell').forEach(square => {
       square.addEventListener('click', handleClick);
     });
