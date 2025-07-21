@@ -1,8 +1,7 @@
 console.log("Dam Haji game loaded!");
 
-function initializeBoard() {
+function initializeBoard(board) {
   const boardSize = 8;
-  const board = document.getElementById("game-board");
   board.innerHTML = ''; // Clear any existing board
 
   for (let row = 0; row < boardSize; row++) {
@@ -415,8 +414,10 @@ if ('serviceWorker' in navigator) {
     const board = document.getElementById("game-board");
     
     // Initialize game and update player display
-    initializeBoard();
+    
     updateCurrentPlayerDisplay();
+    initializeBoard(board);
+    console.log("Board initialized successfully:", board);
 
     board.querySelectorAll('.board-cell').forEach(square => {
       square.addEventListener('click', handleClick);
