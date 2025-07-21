@@ -1,0 +1,16 @@
+{
+  "name": "Dam Haji",
+  "short_name": "Dam Haji",
+  "description": "A traditional Malaysian board game.",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f0f0f0",
+  "theme_color": "#007bff",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
