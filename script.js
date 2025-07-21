@@ -37,8 +37,12 @@ function initializeBoard() {
       // Select a piece
       const cell = document.querySelector(`.board-row:nth-child(${row + 1}) .board-cell:nth-child(${col + 1})`);
       if (cell.hasChildNodes()) {
-        selectedPiece = { row, col };
-        cell.classList.add("selected");
+        // Check if piece belongs to current player
+        const pieceColor = cell.firstChild.classList.contains("black") ? "B" : "W";
+        if (pieceColor === currentPlayer) {
+          selectedPiece = { row, col };
+          cell.classList.add("selected");
+        }
       }
     } else {
       // Move the selected piece
@@ -49,6 +53,17 @@ function initializeBoard() {
 
       const startCell = document.querySelector(`.board-row:nth-child(${startRow + 1}) .board-cell:nth-child(${startCol + 1})`);
       const endCell = document.querySelector(`.board-row:nth-child(${endRow + 1}) .board-cell:nth-child(${endCol + 1})`);
+
+      // Check if there are any available captures for current player
+      const hasAvailableCaptures = checkAvailableCaptures();
+
+      // If captures are available, only allow capturing moves
+      if (hasAvailableCaptures && !isValidCapture(startRow, startCol, endRow, endCol)) {
+        alert("You must capture when possible!");
+        startCell.classList.remove("selected");
+        selectedPiece = null;
+        return;
+      }
 
       // Check if the move is valid
       if (isValidCapture(startRow, startCol, endRow, endCol)) {
@@ -218,6 +233,33 @@ function initializeBoard() {
     return false;
   }
 
+  function checkAvailableCaptures() {
+    // Check all pieces of current player for available captures
+    const pieces = document.querySelectorAll(`.piece.${currentPlayer === "B" ? "black" : "white"}`);
+    
+    for (const piece of pieces) {
+      const cell = piece.parentElement;
+      const row = Array.from(cell.parentElement.parentElement.children).indexOf(cell.parentElement);
+      const col = Array.from(cell.parentElement.children).indexOf(cell);
+      
+      const possibleCaptures = [
+        { row: row - 2, col: col - 2 },
+        { row: row - 2, col: col + 2 },
+        { row: row + 2, col: col - 2 },
+        { row: row + 2, col: col + 2 },
+      ];
+
+      for (const capture of possibleCaptures) {
+        if (capture.row >= 0 && capture.row < 8 && capture.col >= 0 && capture.col < 8) {
+          if (isValidCapture(row, col, capture.row, capture.col)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   function checkWinCondition() {
     const blackPieces = document.querySelectorAll(".piece.black");
     const whitePieces = document.querySelectorAll(".piece.white");
@@ -237,8 +279,19 @@ function initializeBoard() {
 
   function updateCurrentPlayerDisplay() {
     const currentPlayerDisplay = document.getElementById("current-player");
-     if (currentPlayerDisplay) {
-      currentPlayerDisplay.textContent = `Current Player: ${currentPlayer}`;
+    console.log('Current player:', currentPlayer);
+    if (currentPlayerDisplay) {
+      currentPlayerDisplay.textContent = `Current Player: ${currentPlayer === "B" ? "Black" : "White"}`;
+      
+      if (currentPlayer === 'B') {
+        currentPlayerDisplay.classList.remove('white-turn');
+        currentPlayerDisplay.classList.add('black-turn');
+        console.log('Black\'s turn');
+      } else {
+        currentPlayerDisplay.classList.remove('black-turn');
+        currentPlayerDisplay.classList.add('white-turn');
+        console.log('White\'s turn');
+      }
     }
   }
 
@@ -257,4 +310,6 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+// Initialize game and update player display
 initializeBoard();
+updateCurrentPlayerDisplay();
