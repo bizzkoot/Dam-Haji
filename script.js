@@ -15,9 +15,13 @@ function initializeBoard() {
       } else {
         cell.classList.add("dark");
         if (row < 3) {
-          cell.textContent = "B"; // Black pieces
+          const piece = document.createElement("div");
+          piece.classList.add("piece", "black");
+          cell.appendChild(piece);
         } else if (row > 4) {
-          cell.textContent = "W"; // White pieces
+          const piece = document.createElement("div");
+          piece.classList.add("piece", "white");
+          cell.appendChild(piece);
         }
       }
       rowElement.appendChild(cell);
@@ -32,7 +36,7 @@ function initializeBoard() {
     if (selectedPiece === null) {
       // Select a piece
       const cell = document.querySelector(`.board-row:nth-child(${row + 1}) .board-cell:nth-child(${col + 1})`);
-      if (cell.textContent !== "") {
+      if (cell.hasChildNodes()) {
         selectedPiece = { row, col };
         cell.classList.add("selected");
       }
@@ -52,11 +56,10 @@ function initializeBoard() {
         const capturedRow = (startRow + endRow) / 2;
         const capturedCol = (startCol + endCol) / 2;
         const capturedCell = document.querySelector(`.board-row:nth-child(${capturedRow + 1}) .board-cell:nth-child(${capturedCol + 1})`);
-        capturedCell.textContent = "";
+        capturedCell.innerHTML = "";
 
         // Move the piece
-        endCell.textContent = startCell.textContent;
-        startCell.textContent = "";
+        endCell.appendChild(startCell.firstChild);
         startCell.classList.remove("selected");
         selectedPiece = null;
 
@@ -66,8 +69,8 @@ function initializeBoard() {
           endCell.classList.add("selected");
         } else {
           // Check for Haji promotion
-          if ((endRow === 0 && endCell.textContent === "W") || (endRow === 7 && endCell.textContent === "B")) {
-            endCell.textContent = "H"; // Promote to Haji
+          if ((endRow === 0 && endCell.firstChild.classList.contains("white")) || (endRow === 7 && endCell.firstChild.classList.contains("black"))) {
+            endCell.firstChild.classList.add("haji");
           }
           checkWinCondition();
            // Switch player turns
@@ -75,13 +78,12 @@ function initializeBoard() {
         updateCurrentPlayerDisplay();
         }
       } else if (isValidMove(startRow, startCol, endRow, endCol)) {
-        endCell.textContent = startCell.textContent;
-        startCell.textContent = "";
+        endCell.appendChild(startCell.firstChild);
         startCell.classList.remove("selected");
         selectedPiece = null;
         // Check for Haji promotion
-        if ((endRow === 0 && endCell.textContent === "W") || (endRow === 7 && endCell.textContent === "B")) {
-          endCell.textContent = "H"; // Promote to Haji
+        if ((endRow === 0 && endCell.firstChild.classList.contains("white")) || (endRow === 7 && endCell.firstChild.classList.contains("black"))) {
+          endCell.firstChild.classList.add("haji");
         }
         checkWinCondition();
          // Switch player turns
@@ -96,17 +98,17 @@ function initializeBoard() {
   }
 
   function isValidMove(startRow, startCol, endRow, endCol) {
-    const piece = document.querySelector(`.board-row:nth-child(${startRow + 1}) .board-cell:nth-child(${startCol + 1})`).textContent;
+    const piece = document.querySelector(`.board-row:nth-child(${startRow + 1}) .board-cell:nth-child(${startCol + 1})`).firstChild;
     const rowDiff = endRow - startRow;
     const colDiff = Math.abs(endCol - startCol);
 
     // Check if the destination cell is empty and dark
     const endCell = document.querySelector(`.board-row:nth-child(${endRow + 1}) .board-cell:nth-child(${endCol + 1})`);
-    if (endCell.textContent !== "" || (endRow + endCol) % 2 === 0) {
+    if (endCell.hasChildNodes() || (endRow + endCol) % 2 === 0) {
       return false;
     }
 
-    if (piece === "H") {
+    if (piece.classList.contains("haji")) {
       // Haji can move multiple squares diagonally
       if (colDiff !== Math.abs(rowDiff)) {
         return false;
@@ -119,7 +121,7 @@ function initializeBoard() {
       let currentCol = startCol + colStep;
       while (currentRow !== endRow) {
         const cell = document.querySelector(`.board-row:nth-child(${currentRow + 1}) .board-cell:nth-child(${currentCol + 1})`);
-        if (cell.textContent !== "") {
+        if (cell.hasChildNodes()) {
           return false;
         }
         currentRow += rowStep;
@@ -132,11 +134,11 @@ function initializeBoard() {
         return false;
       }
 
-      if (piece === "B" && rowDiff !== 1) {
+      if (piece.classList.contains("black") && rowDiff !== 1) {
         return false;
       }
 
-      if (piece === "W" && rowDiff !== -1) {
+      if (piece.classList.contains("white") && rowDiff !== -1) {
         return false;
       }
 
@@ -145,12 +147,12 @@ function initializeBoard() {
   }
 
   function isValidCapture(startRow, startCol, endRow, endCol) {
-    const piece = document.querySelector(`.board-row:nth-child(${startRow + 1}) .board-cell:nth-child(${startCol + 1})`).textContent;
+    const piece = document.querySelector(`.board-row:nth-child(${startRow + 1}) .board-cell:nth-child(${startCol + 1})`).firstChild;
     const rowDiff = endRow - startRow;
     const colDiff = Math.abs(endCol - startCol);
 
     // Check if Haji and the move is diagonal and multiple squares away
-    if (piece === "H") {
+    if (piece.classList.contains("haji")) {
       if (colDiff !== Math.abs(rowDiff)) {
         return false;
       }
@@ -162,7 +164,7 @@ function initializeBoard() {
       let capturedCount = 0;
       while (currentRow !== endRow) {
         const cell = document.querySelector(`.board-row:nth-child(${currentRow + 1}) .board-cell:nth-child(${currentCol + 1})`);
-        if (cell.textContent !== "" ) {
+        if (cell.hasChildNodes()) {
           capturedCount++
         }
         currentRow += rowStep;
@@ -181,7 +183,7 @@ function initializeBoard() {
 
     // Check if the destination cell is empty and dark
     const endCell = document.querySelector(`.board-row:nth-child(${endRow + 1}) .board-cell:nth-child(${endCol + 1})`);
-    if (endCell.textContent !== "" || (endRow + endCol) % 2 === 0) {
+    if (endCell.hasChildNodes() || (endRow + endCol) % 2 === 0) {
       return false;
     }
 
@@ -189,7 +191,7 @@ function initializeBoard() {
     const capturedRow = (startRow + endRow) / 2;
     const capturedCol = (startCol + endCol) / 2;
     const capturedCell = document.querySelector(`.board-row:nth-child(${capturedRow + 1}) .board-cell:nth-child(${capturedCol + 1})`);
-    if (capturedCell.textContent === "" || capturedCell.textContent === piece) {
+    if (!capturedCell.hasChildNodes() || capturedCell.firstChild.classList.contains(piece.classList.contains("black") ? "black" : "white")) {
       return false;
     }
 
@@ -217,8 +219,8 @@ function initializeBoard() {
   }
 
   function checkWinCondition() {
-    const blackPieces = Array.from(document.querySelectorAll(".board-cell")).filter(cell => cell.textContent === "B" || cell.textContent === "H");
-    const whitePieces = Array.from(document.querySelectorAll(".board-cell")).filter(cell => cell.textContent === "W" || cell.textContent === "H");
+    const blackPieces = document.querySelectorAll(".piece.black");
+    const whitePieces = document.querySelectorAll(".piece.white");
 
     if (blackPieces.length === 0) {
       alert("White wins!");
