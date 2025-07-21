@@ -29,7 +29,6 @@ function initializeBoard() {
     board.appendChild(rowElement);
   }
 
-  let selectedPiece = null;
   let currentPlayer = "B"; // Black starts first
 
   function handleClick(row, col) {
@@ -77,6 +76,59 @@ function initializeBoard() {
         endCell.appendChild(startCell.firstChild);
         startCell.classList.remove("selected");
         selectedPiece = null;
+function highlightAvailableMoves(piece) {
+  clearAvailableMoves();
+  const pieceRow = parseInt(piece.parentNode.dataset.row);
+  const pieceCol = parseInt(piece.parentNode.dataset.col);
+  const isHaji = piece.classList.contains('haji');
+  const player = piece.classList.contains('black') ? 'black' : 'white';
+
+  let moveDirections = [];
+  if (isHaji) {
+    moveDirections = [[-1, -1], [-1, 1], [1, -1], [1, 1]]; // All directions for Haji
+  } else if (player === 'black') {
+    moveDirections = [[1, -1], [1, 1]]; // Black moves down
+  } else {
+    moveDirections = [[-1, -1], [-1, 1]]; // White moves up
+  }
+
+  moveDirections.forEach(direction => {
+    const rowDir = direction[0];
+    const colDir = direction[1];
+
+    let currentRow = pieceRow + rowDir;
+    let currentCol = pieceCol + colDir;
+
+    if (currentRow >= 0 && currentRow < 8 && currentCol >= 0 && currentCol < 8) {
+      const targetSquare = document.querySelector(`.square[data-row="${currentRow}"][data-col="${currentCol}"]`);
+      if (targetSquare && !targetSquare.firstChild) {
+        targetSquare.classList.add('available-move');
+      } else {
+        // Check for capture moves
+        const nextRow = currentRow + rowDir;
+        const nextCol = currentCol + colDir;
+        if (nextRow >= 0 && nextRow < 8 && nextCol >= 0 && nextCol < 8) {
+          const captureSquare = document.querySelector(`.square[data-row="${nextRow}"][data-col="${nextCol}"]`);
+          if (captureSquare && !captureSquare.firstChild) {
+            const capturedPiece = targetSquare.firstChild;
+            if (capturedPiece && capturedPiece.classList.contains(player === 'black' ? 'white' : 'black')) {
+              captureSquare.classList.add('capture-move');
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function clearAvailableMoves() {
+  document.querySelectorAll('.available-move').forEach(square => {
+    square.classList.remove('available-move');
+  });
+  document.querySelectorAll('.capture-move').forEach(square => {
+    square.classList.remove('capture-move');
+  });
+}
 
         // Check for multiple captures
         if (canCaptureAgain(endRow, endCol)) {
@@ -150,10 +202,12 @@ function initializeBoard() {
       }
 
       if (piece.classList.contains("black") && rowDiff !== 1) {
+        console.log("Black piece cannot move backward");
         return false;
       }
 
       if (piece.classList.contains("white") && rowDiff !== -1) {
+        console.log("White piece cannot move backward");
         return false;
       }
 
@@ -295,12 +349,52 @@ function initializeBoard() {
     }
   }
 
+let selectedPiece = null; // Track the selected piece
+
+function handleClick(event) {
+  const square = event.target;
+  const piece = square.firstChild;
+
+  // Get the row and col from the square's dataset
+  const row = parseInt(square.dataset.row);
+  const col = parseInt(square.dataset.col);
+
+  if (piece) {
+    // A piece was clicked
+    if (piece === selectedPiece) {
+      // Deselect the piece
+      clearAvailableMoves();
+      selectedPiece = null;
+    } else {
+      // Select the piece
+      clearAvailableMoves();
+      selectedPiece = piece;
+      highlightAvailableMoves(piece);
+    }
+  } else {
+    // An empty square was clicked
+    if (selectedPiece) {
+      // Move the piece
+      const startRow = parseInt(selectedPiece.parentNode.dataset.row);
+      const startCol = parseInt(selectedPiece.parentNode.dataset.col);
+      
+      if (isValidMove(startRow, startCol, row, col)) {
+        // Move the piece
+        const startCell = document.querySelector(`.board-row:nth-child(${startRow + 1}) .board-cell:nth-child(${startCol + 1})`);
+        const endCell = document.querySelector(`.board-row:nth-child(${row + 1}) .board-cell:nth-child(${col + 1})`);
+        endCell.appendChild(startCell.firstChild);
+        clearAvailableMoves();
+        selectedPiece = null;
+        currentPlayer = currentPlayer === 'B' ? 'W' : 'B';
+        updateCurrentPlayerDisplay();
+      }
+    }
+  }
+}
+
   // Add click event listeners to the cells
-  const cells = document.querySelectorAll(".board-cell");
-  cells.forEach((cell, index) => {
-    const row = Math.floor(index / 8);
-    const col = index % 8;
-    cell.addEventListener("click", () => handleClick(row, col));
+  board.querySelectorAll('.board-cell').forEach(square => {
+    square.addEventListener('click', handleClick);
   });
 }
 

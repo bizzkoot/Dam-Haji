@@ -97,3 +97,11 @@ body {
   border-left: 5px solid #777;
   color: #777;
 }
+
+.available-move {
+  background-color: rgba(0, 255, 0, 0.3); /* Green with transparency */
+}
+
+.capture-move {
+  background-color: rgba(255, 0, 0, 0.5); /* Red with transparency */
+}
