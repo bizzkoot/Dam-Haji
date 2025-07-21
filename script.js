@@ -393,16 +393,26 @@ function handleClick(event) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    console.log('Service worker registration attempted.');
     navigator.serviceWorker.register('./service-worker.js');
   });
 }
 
-// Initialize game and update player display
-initializeBoard();
-updateCurrentPlayerDisplay();
 
-const board = document.getElementById("game-board");
-board.querySelectorAll('.board-cell').forEach(square => {
-  square.addEventListener('click', handleClick);
-});
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    console.log('Service worker registration attempted.');
+    navigator.serviceWorker.register('./service-worker.js');
+
+    // Initialize game and update player display
+    initializeBoard();
+    updateCurrentPlayerDisplay();
+
+    const board = document.getElementById("game-board");
+    board.querySelectorAll('.board-cell').forEach(square => {
+      square.addEventListener('click', handleClick);
+    });
+  });
 }

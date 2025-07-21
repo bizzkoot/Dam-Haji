@@ -3,7 +3,8 @@ const staticAssets = [
   'index.html',
   'style.css',
   'script.js',
-  'manifest.json'
+  'manifest.json',
+  'favicon.ico'
 ];
 
 self.addEventListener('install', async () => {
