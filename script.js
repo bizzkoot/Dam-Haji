@@ -2,7 +2,6 @@ console.log("Dam Haji game loaded!");
 
 function initializeBoard() {
   const boardSize = 8;
-  const board = document.getElementById("game-board");
 
   for (let row = 0; row < boardSize; row++) {
     const rowElement = document.createElement("div");
@@ -392,18 +391,18 @@ function handleClick(event) {
   }
 }
 
-  // Add click event listeners to the cells
-  board.querySelectorAll('.board-cell').forEach(square => {
-    square.addEventListener('click', handleClick);
-  });
-}
-
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js');
+    navigator.serviceWorker.register('./service-worker.js');
   });
 }
 
 // Initialize game and update player display
 initializeBoard();
 updateCurrentPlayerDisplay();
+
+const board = document.getElementById("game-board");
+board.querySelectorAll('.board-cell').forEach(square => {
+  square.addEventListener('click', handleClick);
+});
+}
