@@ -20,6 +20,11 @@ function logStep(txId, step, status, data) {
 }
 
 function initializeBoard(board) {
+  console.log("initializeBoard called with board:", board);
+  if (!board) {
+    console.error("Board element is null or undefined!");
+    return;
+  }
   const boardSize = 8;
   board.innerHTML = ''; // Clear any existing board
 
@@ -426,6 +431,10 @@ function handleClick(event) {
 
 function resetGame() {
   const board = document.getElementById("game-board");
+  if (!board) {
+    console.error("Game board element not found in resetGame!");
+    return;
+  }
   initializeBoard(board);
   currentPlayer = "B";
   selectedPiece = null;
@@ -438,6 +447,11 @@ function resetGame() {
 
 window.addEventListener('load', () => {
     const board = document.getElementById("game-board");
+    
+    if (!board) {
+        console.error("Game board element not found!");
+        return;
+    }
     
     initializeBoard(board);
     updateCurrentPlayerDisplay();
