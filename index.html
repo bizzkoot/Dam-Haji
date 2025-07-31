@@ -9,8 +9,18 @@
 </head>
 <body>
   <h1>Dam Haji</h1>
-  <div id="current-player"></div>
+  <div id="game-info">
+    <div id="current-player"></div>
+    <div id="score">
+      <span id="black-score">Black: 0</span>
+      <span id="white-score">White: 0</span>
+    </div>
+  </div>
   <div id="game-board"></div>
+  <div id="win-modal" class="hidden">
+    <div id="win-message"></div>
+    <button id="play-again">Play Again</button>
+  </div>
   <script src="script.js"></script>
 </body>
 </html>

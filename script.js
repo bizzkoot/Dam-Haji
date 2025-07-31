@@ -2,6 +2,22 @@ console.log("Dam Haji game loaded!");
 
 let currentPlayer = "B"; // Black starts first
 let selectedPiece = null; // Track the selected piece
+let blackScore = 0;
+let whiteScore = 0;
+
+function generateTransactionId() {
+    return 'tx-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+}
+
+function logStep(txId, step, status, data) {
+    console.log(JSON.stringify({
+        transactionId: txId,
+        timestamp: new Date().toISOString(),
+        step: step,
+        status: status,
+        data: data
+    }, null, 2));
+}
 
 function initializeBoard(board) {
   const boardSize = 8;
@@ -36,50 +52,92 @@ function initializeBoard(board) {
   }
 }
 
-function highlightAvailableMoves(piece) {
-  clearAvailableMoves();
-  const pieceRow = parseInt(piece.parentNode.dataset.row);
-  const pieceCol = parseInt(piece.parentNode.dataset.col);
-  const isHaji = piece.classList.contains('haji');
-  const player = piece.classList.contains('black') ? 'black' : 'white';
-
-  let moveDirections = [];
-  if (isHaji) {
-    moveDirections = [[-1, -1], [-1, 1], [1, -1], [1, 1]]; // All directions for Haji
-  } else if (player === 'black') {
-    moveDirections = [[1, -1], [1, 1]]; // Black moves down
-  } else {
-    moveDirections = [[-1, -1], [-1, 1]]; // White moves up
-  }
-
-  moveDirections.forEach(direction => {
-    const rowDir = direction[0];
-    const colDir = direction[1];
-
-    let currentRow = pieceRow + rowDir;
-    let currentCol = pieceCol + colDir;
-
-    if (currentRow >= 0 && currentRow < 8 && currentCol >= 0 && currentCol < 8) {
-      const targetSquare = document.querySelector(`.board-cell[data-row="${currentRow}"][data-col="${currentCol}"]`);
-      if (targetSquare && !targetSquare.firstChild) {
-        targetSquare.classList.add('available-move');
-      } else {
-        // Check for capture moves
-        const nextRow = currentRow + rowDir;
-        const nextCol = currentCol + colDir;
-        if (nextRow >= 0 && nextRow < 8 && nextCol >= 0 && nextCol < 8) {
-          const captureSquare = document.querySelector(`.board-cell[data-row="${nextRow}"][data-col="${nextCol}"]`);
-          if (captureSquare && !captureSquare.firstChild) {
-            const capturedPiece = targetSquare.firstChild;
-            if (capturedPiece && capturedPiece.classList.contains(player === 'black' ? 'white' : 'black')) {
-              captureSquare.classList.add('capture-move');
-            }
-          }
-        }
-      }
-    }
-  });
+function getPiece(row, col) {
+    const cell = document.querySelector(`.board-cell[data-row="${row}"][data-col="${col}"]`);
+    return cell ? cell.firstChild : null;
 }
+
+function highlightAvailableMoves(piece, txId) {
+    logStep(txId, 'highlightAvailableMoves', 'START', { piece: piece ? piece.outerHTML : null });
+    clearAvailableMoves();
+    const pieceRow = parseInt(piece.parentNode.dataset.row);
+    const pieceCol = parseInt(piece.parentNode.dataset.col);
+
+    const mustCapture = checkAvailableCaptures(txId);
+    logStep(txId, 'highlightAvailableMoves', 'INFO', { mustCapture: mustCapture });
+
+    if (mustCapture) {
+        const captureMoves = getAvailableCaptureMoves(pieceRow, pieceCol, txId);
+        logStep(txId, 'highlightAvailableMoves', 'INFO', { captureMoves: captureMoves });
+        captureMoves.forEach(move => {
+            const cell = document.querySelector(`.board-cell[data-row="${move.row}"][data-col="${move.col}"]`);
+            if (cell) cell.classList.add('capture-move');
+        });
+    } else {
+        const regularMoves = getAvailableRegularMoves(pieceRow, pieceCol, txId);
+        logStep(txId, 'highlightAvailableMoves', 'INFO', { regularMoves: regularMoves });
+        regularMoves.forEach(move => {
+            const cell = document.querySelector(`.board-cell[data-row="${move.row}"][data-col="${move.col}"]`);
+            if (cell) cell.classList.add('available-move');
+        });
+    }
+    logStep(txId, 'highlightAvailableMoves', 'SUCCESS', {});
+}
+
+function getAvailableCaptureMoves(row, col, txId) {
+    logStep(txId, 'getAvailableCaptureMoves', 'START', { row: row, col: col });
+    const moves = [];
+    const piece = getPiece(row, col);
+    if (!piece) {
+        logStep(txId, 'getAvailableCaptureMoves', 'SUCCESS', { moves: moves });
+        return moves;
+    }
+
+    const directions = [[-2, -2], [-2, 2], [2, -2], [2, 2]];
+    
+    directions.forEach(dir => {
+        const newRow = row + dir[0];
+        const newCol = col + dir[1];
+        if (isValidCapture(row, col, newRow, newCol, txId)) {
+            moves.push({ row: newRow, col: newCol });
+        }
+    });
+    logStep(txId, 'getAvailableCaptureMoves', 'SUCCESS', { moves: moves });
+    return moves;
+}
+
+function getAvailableRegularMoves(row, col, txId) {
+    logStep(txId, 'getAvailableRegularMoves', 'START', { row: row, col: col });
+    const moves = [];
+    const piece = getPiece(row, col);
+    if (!piece) {
+        logStep(txId, 'getAvailableRegularMoves', 'SUCCESS', { moves: moves });
+        return moves;
+    }
+
+    const player = piece.classList.contains('black') ? 'B' : 'W';
+    const isHaji = piece.classList.contains('haji');
+    
+    let directions = [];
+    if (isHaji) {
+        directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+    } else if (player === 'B') {
+        directions = [[1, -1], [1, 1]];
+    } else {
+        directions = [[-1, -1], [-1, 1]];
+    }
+
+    directions.forEach(dir => {
+        const newRow = row + dir[0];
+        const newCol = col + dir[1];
+        if (isValidMove(row, col, newRow, newCol, txId)) {
+            moves.push({ row: newRow, col: newCol });
+        }
+    });
+    logStep(txId, 'getAvailableRegularMoves', 'SUCCESS', { moves: moves });
+    return moves;
+}
+
 
 function clearAvailableMoves() {
   document.querySelectorAll('.available-move').forEach(square => {
@@ -90,172 +148,171 @@ function clearAvailableMoves() {
   });
 }
 
-function isValidMove(startRow, startCol, endRow, endCol) {
-  const piece = document.querySelector(`.board-row:nth-child(${startRow + 1}) .board-cell:nth-child(${startCol + 1})`).firstChild;
-  const rowDiff = endRow - startRow;
-  const colDiff = Math.abs(endCol - startCol);
-
-  // Check if the destination cell is empty and dark
-  const endCell = document.querySelector(`.board-row:nth-child(${endRow + 1}) .board-cell:nth-child(${endCol + 1})`);
-  if (endCell.hasChildNodes() || (endRow + endCol) % 2 === 0) {
+function isValidMove(startRow, startCol, endRow, endCol, txId) {
+  logStep(txId, 'isValidMove', 'START', { startRow, startCol, endRow, endCol });
+  if (endRow < 0 || endRow >= 8 || endCol < 0 || endCol >= 8) {
+    logStep(txId, 'isValidMove', 'FAILURE', { reason: 'out of bounds' });
+    return false;
+  }
+  const piece = getPiece(startRow, startCol);
+  if (!piece) {
+    logStep(txId, 'isValidMove', 'FAILURE', { reason: 'no piece at start' });
     return false;
   }
 
-  if (piece.classList.contains("haji")) {
-    // Haji can move multiple squares diagonally
-    if (colDiff !== Math.abs(rowDiff)) {
-      return false;
-    }
+  const endCell = document.querySelector(`.board-cell[data-row="${endRow}"][data-col="${endCol}"]`);
+  if (!endCell || endCell.hasChildNodes() || (endRow + endCol) % 2 === 0) {
+    logStep(txId, 'isValidMove', 'FAILURE', { reason: 'invalid end cell' });
+    return false;
+  }
 
-    // Check if the path is clear
+  const rowDiff = endRow - startRow;
+  const colDiff = Math.abs(endCol - startCol);
+
+  if (piece.classList.contains("haji")) {
+    if (colDiff !== Math.abs(rowDiff)) {
+        logStep(txId, 'isValidMove', 'FAILURE', { reason: 'haji not diagonal' });
+        return false;
+    }
     const rowStep = rowDiff > 0 ? 1 : -1;
     const colStep = endCol > startCol ? 1 : -1;
     let currentRow = startRow + rowStep;
     let currentCol = startCol + colStep;
     while (currentRow !== endRow) {
-      const cell = document.querySelector(`.board-row:nth-child(${currentRow + 1}) .board-cell:nth-child(${currentCol + 1})`);
-      if (cell.hasChildNodes()) {
+      if (getPiece(currentRow, currentCol)) {
+        logStep(txId, 'isValidMove', 'FAILURE', { reason: 'haji path not clear' });
         return false;
       }
       currentRow += rowStep;
       currentCol += colStep;
     }
+    logStep(txId, 'isValidMove', 'SUCCESS', {});
     return true;
   } else {
-    // Regular pieces can only move one square diagonally forward
     if (colDiff !== 1) {
-      return false;
+        logStep(txId, 'isValidMove', 'FAILURE', { reason: 'not 1 col diff' });
+        return false;
     }
-
     if (piece.classList.contains("black") && rowDiff !== 1) {
-      console.log("Black piece cannot move backward");
-      return false;
+        logStep(txId, 'isValidMove', 'FAILURE', { reason: 'black cannot move backward' });
+        return false;
     }
-
     if (piece.classList.contains("white") && rowDiff !== -1) {
-      console.log("White piece cannot move backward");
-      return false;
+        logStep(txId, 'isValidMove', 'FAILURE', { reason: 'white cannot move backward' });
+        return false;
     }
-
+    logStep(txId, 'isValidMove', 'SUCCESS', {});
     return true;
   }
 }
 
-function isValidCapture(startRow, startCol, endRow, endCol) {
-  const piece = document.querySelector(`.board-row:nth-child(${startRow + 1}) .board-cell:nth-child(${startCol + 1})`).firstChild;
-  if (!piece) return false;
+function isValidCapture(startRow, startCol, endRow, endCol, txId) {
+  logStep(txId, 'isValidCapture', 'START', { startRow, startCol, endRow, endCol });
+  if (endRow < 0 || endRow >= 8 || endCol < 0 || endCol >= 8) {
+    logStep(txId, 'isValidCapture', 'FAILURE', { reason: 'out of bounds' });
+    return false;
+  }
+  const piece = getPiece(startRow, startCol);
+  if (!piece) {
+    logStep(txId, 'isValidCapture', 'FAILURE', { reason: 'no piece at start' });
+    return false;
+  }
+
+  const endCell = document.querySelector(`.board-cell[data-row="${endRow}"][data-col="${endCol}"]`);
+  if (!endCell || endCell.hasChildNodes() || (endRow + endCol) % 2 === 0) {
+    logStep(txId, 'isValidCapture', 'FAILURE', { reason: 'invalid end cell' });
+    return false;
+  }
+
   const rowDiff = endRow - startRow;
   const colDiff = Math.abs(endCol - startCol);
 
-  // Check if Haji and the move is diagonal and multiple squares away
   if (piece.classList.contains("haji")) {
     if (colDiff !== Math.abs(rowDiff)) {
-      return false;
+        logStep(txId, 'isValidCapture', 'FAILURE', { reason: 'haji not diagonal' });
+        return false;
     }
-    // Check if the path is clear and capturing pieces
     const rowStep = rowDiff > 0 ? 1 : -1;
     const colStep = endCol > startCol ? 1 : -1;
     let currentRow = startRow + rowStep;
     let currentCol = startCol + colStep;
     let capturedCount = 0;
     while (currentRow !== endRow) {
-      const cell = document.querySelector(`.board-row:nth-child(${currentRow + 1}) .board-cell:nth-child(${currentCol + 1})`);
-      if (cell.hasChildNodes()) {
-        if (cell.firstChild.classList.contains(piece.classList.contains("black") ? "white" : "black")) {
+      const jumpedPiece = getPiece(currentRow, currentCol);
+      if (jumpedPiece) {
+        if (jumpedPiece.classList.contains(piece.classList.contains("black") ? "white" : "black")) {
           capturedCount++;
         } else {
-          return false; // blocked by own piece
+          logStep(txId, 'isValidCapture', 'FAILURE', { reason: 'haji cannot jump own piece' });
+          return false; // Can't jump own piece
         }
       }
       currentRow += rowStep;
       currentCol += colStep;
     }
-    return capturedCount === 1;
+    if (capturedCount === 1) {
+        logStep(txId, 'isValidCapture', 'SUCCESS', {});
+        return true;
+    } else {
+        logStep(txId, 'isValidCapture', 'FAILURE', { reason: 'haji captured wrong number of pieces' });
+        return false;
+    }
   } else {
-    // Check if the move is diagonal and two squares away
     if (colDiff !== 2 || Math.abs(rowDiff) !== 2) {
+        logStep(txId, 'isValidCapture', 'FAILURE', { reason: 'not 2 diff' });
+        return false;
+    }
+    const capturedRow = (startRow + endRow) / 2;
+    const capturedCol = (startCol + endCol) / 2;
+    const capturedPiece = getPiece(capturedRow, capturedCol);
+    if (!capturedPiece || capturedPiece.classList.contains(piece.classList.contains("black") ? "black" : "white")) {
+      logStep(txId, 'isValidCapture', 'FAILURE', { reason: 'no piece to capture' });
       return false;
     }
+    logStep(txId, 'isValidCapture', 'SUCCESS', {});
+    return true;
   }
-
-  // Check if the destination cell is empty and dark
-  const endCell = document.querySelector(`.board-row:nth-child(${endRow + 1}) .board-cell:nth-child(${endCol + 1})`);
-  if (endCell.hasChildNodes() || (endRow + endCol) % 2 === 0) {
-    return false;
-  }
-
-  // Check if there is an opponent's piece in the middle
-  const capturedRow = (startRow + endRow) / 2;
-  const capturedCol = (startCol + endCol) / 2;
-  const capturedCell = document.querySelector(`.board-row:nth-child(${capturedRow + 1}) .board-cell:nth-child(${capturedCol + 1})`);
-  if (!capturedCell.hasChildNodes() || capturedCell.firstChild.classList.contains(piece.classList.contains("black") ? "black" : "white")) {
-    return false;
-  }
-
-  return true;
 }
 
-function canCaptureAgain(row, col) {
-  // Check if there are any capturing moves available from the current position
-  const possibleCaptures = [
-    { row: row - 2, col: col - 2 },
-    { row: row - 2, col: col + 2 },
-    { row: row + 2, col: col - 2 },
-    { row: row + 2, col: col + 2 },
-  ];
-
-  for (const capture of possibleCaptures) {
-    if (capture.row >= 0 && capture.row < 8 && capture.col >= 0 && capture.col < 8) {
-      if (isValidCapture(row, col, capture.row, capture.col)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+function canCaptureAgain(row, col, txId) {
+    logStep(txId, 'canCaptureAgain', 'START', { row, col });
+    const result = getAvailableCaptureMoves(row, col, txId).length > 0;
+    logStep(txId, 'canCaptureAgain', 'SUCCESS', { result });
+    return result;
 }
 
-function checkAvailableCaptures() {
-  // Check all pieces of current player for available captures
+function checkAvailableCaptures(txId) {
+  logStep(txId, 'checkAvailableCaptures', 'START', {});
   const pieces = document.querySelectorAll(`.piece.${currentPlayer === "B" ? "black" : "white"}`);
-  
   for (const piece of pieces) {
-    const cell = piece.parentElement;
-    const row = parseInt(cell.dataset.row);
-    const col = parseInt(cell.dataset.col);
-    
-    const possibleCaptures = [
-      { row: row - 2, col: col - 2 },
-      { row: row - 2, col: col + 2 },
-      { row: row + 2, col: col - 2 },
-      { row: row + 2, col: col + 2 },
-    ];
-
-    for (const capture of possibleCaptures) {
-      if (capture.row >= 0 && capture.row < 8 && capture.col >= 0 && capture.col < 8) {
-        if (isValidCapture(row, col, capture.row, capture.col)) {
-          return true;
-        }
-      }
+    const row = parseInt(piece.parentElement.dataset.row);
+    const col = parseInt(piece.parentElement.dataset.col);
+    if (getAvailableCaptureMoves(row, col, txId).length > 0) {
+      logStep(txId, 'checkAvailableCaptures', 'SUCCESS', { result: true });
+      return true;
     }
   }
+  logStep(txId, 'checkAvailableCaptures', 'SUCCESS', { result: false });
   return false;
 }
 
-function checkWinCondition() {
+function checkWinCondition(txId) {
+  logStep(txId, 'checkWinCondition', 'START', {});
   const blackPieces = document.querySelectorAll(".piece.black");
   const whitePieces = document.querySelectorAll(".piece.white");
 
   if (blackPieces.length === 0) {
-    alert("White wins!");
+    showWinMessage("White");
+    logStep(txId, 'checkWinCondition', 'SUCCESS', { winner: 'White' });
     return true;
   }
 
   if (whitePieces.length === 0) {
-    alert("Black wins!");
+    showWinMessage("Black");
+    logStep(txId, 'checkWinCondition', 'SUCCESS', { winner: 'Black' });
     return true;
   }
-
+  logStep(txId, 'checkWinCondition', 'SUCCESS', { winner: null });
   return false;
 }
 
@@ -274,23 +331,44 @@ function updateCurrentPlayerDisplay() {
   }
 }
 
+function updateScore() {
+  document.getElementById('black-score').textContent = `Black: ${blackScore}`;
+  document.getElementById('white-score').textContent = `White: ${whiteScore}`;
+}
+
+function showWinMessage(winner) {
+  const winModal = document.getElementById('win-modal');
+  const winMessage = document.getElementById('win-message');
+  winMessage.textContent = `${winner} wins!`;
+  winModal.classList.remove('hidden');
+}
+
 function handleClick(event) {
-    const square = event.currentTarget; // Use currentTarget to get the element with the listener
+    const txId = generateTransactionId();
+    logStep(txId, 'handleClick', 'START', { target: event.currentTarget.outerHTML });
+    const square = event.currentTarget;
     const row = parseInt(square.dataset.row);
     const col = parseInt(square.dataset.col);
 
     if (selectedPiece) {
+        logStep(txId, 'handleClick', 'INFO', { action: 'move piece' });
         const startCell = selectedPiece.parentNode;
-        startCell.classList.remove("selected");
         const startRow = parseInt(startCell.dataset.row);
         const startCol = parseInt(startCell.dataset.col);
 
-        const hasAvailableCaptures = checkAvailableCaptures();
+        const mustCapture = checkAvailableCaptures(txId);
 
-        if (isValidCapture(startRow, startCol, row, col)) {
+        if (isValidCapture(startRow, startCol, row, col, txId)) {
+            logStep(txId, 'handleClick', 'INFO', { moveType: 'capture' });
             const capturedRow = (startRow + row) / 2;
             const capturedCol = (startCol + col) / 2;
             const capturedCell = document.querySelector(`.board-cell[data-row="${capturedRow}"][data-col="${capturedCol}"]`);
+            if (currentPlayer === 'B') {
+              whiteScore++;
+            } else {
+              blackScore++;
+            }
+            updateScore();
             capturedCell.innerHTML = "";
 
             square.appendChild(selectedPiece);
@@ -299,18 +377,25 @@ function handleClick(event) {
                 selectedPiece.classList.add("haji");
             }
 
-            if (canCaptureAgain(row, col)) {
+            if (canCaptureAgain(row, col, txId)) {
                 selectedPiece = square.firstChild;
+                startCell.classList.remove("selected");
                 square.classList.add("selected");
+                highlightAvailableMoves(selectedPiece, txId);
             } else {
                 selectedPiece = null;
+                startCell.classList.remove("selected");
+                clearAvailableMoves();
                 currentPlayer = currentPlayer === "B" ? "W" : "B";
                 updateCurrentPlayerDisplay();
-                checkWinCondition();
+                checkWinCondition(txId);
             }
-        } else if (!hasAvailableCaptures && isValidMove(startRow, startCol, row, col)) {
+        } else if (!mustCapture && isValidMove(startRow, startCol, row, col, txId)) {
+            logStep(txId, 'handleClick', 'INFO', { moveType: 'regular' });
             square.appendChild(selectedPiece);
             selectedPiece = null;
+            startCell.classList.remove("selected");
+            clearAvailableMoves();
 
             if ((row === 0 && square.firstChild.classList.contains("white")) || (row === 7 && square.firstChild.classList.contains("black"))) {
                 square.firstChild.classList.add("haji");
@@ -318,36 +403,50 @@ function handleClick(event) {
             
             currentPlayer = currentPlayer === "B" ? "W" : "B";
             updateCurrentPlayerDisplay();
-            checkWinCondition();
+            checkWinCondition(txId);
         } else {
-            alert(hasAvailableCaptures ? "You must capture when possible!" : "Invalid move!");
+            logStep(txId, 'handleClick', 'FAILURE', { reason: 'invalid move' });
+            alert(mustCapture ? "You must capture when possible!" : "Invalid move!");
             selectedPiece = null;
+            startCell.classList.remove("selected");
             clearAvailableMoves();
         }
     } else if (square.hasChildNodes()) {
+        logStep(txId, 'handleClick', 'INFO', { action: 'select piece' });
         const piece = square.firstChild;
         const pieceColor = piece.classList.contains("black") ? "B" : "W";
         if (pieceColor === currentPlayer) {
             selectedPiece = piece;
             square.classList.add("selected");
-            highlightAvailableMoves(piece);
+            highlightAvailableMoves(piece, txId);
         }
     }
+    logStep(txId, 'handleClick', 'SUCCESS', {});
 }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    console.log('Service worker registration attempted.');
-    navigator.serviceWorker.register('./service-worker.js');
+function resetGame() {
+  const board = document.getElementById("game-board");
+  initializeBoard(board);
+  currentPlayer = "B";
+  selectedPiece = null;
+  blackScore = 0;
+  whiteScore = 0;
+  updateScore();
+  updateCurrentPlayerDisplay();
+  document.getElementById('win-modal').classList.add('hidden');
+}
 
+window.addEventListener('load', () => {
     const board = document.getElementById("game-board");
     
     initializeBoard(board);
     updateCurrentPlayerDisplay();
+    updateScore();
     console.log("Board initialized successfully.");
 
     board.querySelectorAll('.board-cell').forEach(square => {
       square.addEventListener('click', handleClick);
     });
-  });
-}
+
+    document.getElementById('play-again').addEventListener('click', resetGame);
+});
