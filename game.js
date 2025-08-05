@@ -143,7 +143,13 @@ function isValidCapture(startRow, startCol, endRow, endCol) {
     
     return capturedCount === 1;
   } else {
-    if (colDiff !== 2 || Math.abs(rowDiff) !== 2) {
+    if (colDiff !== 2) {
+        return false;
+    }
+    if (piece.classList.contains("black") && rowDiff !== 2) {
+        return false;
+    }
+    if (piece.classList.contains("white") && rowDiff !== -2) {
         return false;
     }
     const capturedRow = (startRow + endRow) / 2;

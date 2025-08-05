@@ -54,6 +54,19 @@
    - **Solution**: Added `pureCheckAvailableCaptures` function and updated AI logic to prioritize forced captures
    - **Result**: AI now follows same forced capture rules as players, ensuring fair gameplay
 
+8. **Player & AI Capture Direction Logic Fixed**: Regular pieces are now correctly restricted to forward-only captures.
+   - **Issue**: Regular (non-Haji) pieces could capture both forwards and backwards. This caused the game to force illegal moves on the player and confused the AI.
+   - **Root Cause**: The `isValidCapture` (in `game.js`) and `pureIsValidCapture` (in `ai.js`) functions incorrectly checked `Math.abs(rowDiff)` instead of enforcing a forward-only direction.
+   - **Solution**: Updated the validation logic in both files to enforce `rowDiff === 2` for Black and `rowDiff === -2` for White for non-Haji captures.
+   - **Result**: Both player and AI now adhere to the correct forward-only capture rule.
+
+9. **AI Race Condition ("Ghost Piece") Bug Fixed**: AI no longer attempts to move a piece that was just captured.
+   - **Issue**: The AI would occasionally attempt to move a piece that had just been captured by the player, resulting in an illegal move with a "ghost" piece.
+   - **Evidence from Logs**: The AI's logged board state (`console.table`) showed a piece as present on a square immediately after it had been captured.
+   - **Root Cause**: A race condition in `script.js`. The `setTimeout` for `makeAIMove` was not sufficient to guarantee the DOM had been updated after a capture.
+   - **Solution**: Replaced the simple `setTimeout` with `requestAnimationFrame(() => setTimeout(makeAIMove, 100))` in the `executeMove` function.
+   - **Result**: The AI now always acts on the most current board state, eliminating illegal "ghost" moves.
+
 #### ⚠️ **Remaining Issues**
 1. **Limited Visual Feedback**: Basic highlighting for moves
 2. **No Move History**: Players can't review previous moves
@@ -504,6 +517,19 @@ MOVE: Player W moves from [7,4] to [6,5] (Capture: false)
 **Root Cause**: AI's `findBestMove` function didn't implement forced capture logic like the player
 **Solution**: Added `pureCheckAvailableCaptures` function and updated both `findBestMove` and `minimax` functions to prioritize forced captures
 **Impact**: ✅ AI now follows same forced capture rules as players, ensuring fair gameplay
+
+#### 7. Player & AI Capture Direction Logic Fixed
+**Problem**: Regular (non-Haji) pieces could capture both forwards and backwards, violating game rules.
+**Root Cause**: The `isValidCapture` and `pureIsValidCapture` functions incorrectly used `Math.abs(rowDiff)` for non-Haji pieces.
+**Solution**: The logic was corrected to enforce forward-only captures for regular pieces.
+**Impact**: ✅ Both player and AI now adhere to the correct capture rules.
+
+#### 8. AI Race Condition ("Ghost Piece") Bug Fixed
+**Problem**: The AI would occasionally attempt to move a piece that had just been captured by the player.
+**Evidence from Logs**: The AI's logged board state (`console.table`) showed a piece as present on a square immediately after it had been captured.
+**Root Cause**: A race condition in `script.js` where the AI would "think" before the DOM had been updated to remove the captured piece.
+**Solution**: Replaced the simple `setTimeout` with `requestAnimationFrame(() => setTimeout(makeAIMove, 100))` to ensure the AI acts on an updated board.
+**Impact**: ✅ The AI now always acts on the most current board state, eliminating illegal "ghost" moves.
 
 ### Technical Analysis
 

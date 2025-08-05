@@ -136,7 +136,8 @@ function executeMove(move) {
         selectedPiece = endCell.firstChild;
         highlightAvailableMoves(selectedPiece);
         if (aiEnabled && currentPlayer === aiPlayer) {
-            setTimeout(makeAIMove, 300);
+            // Wait for the captured piece to be removed before making the next AI move
+            setTimeout(makeAIMove, 600);
         }
     } else {
         selectedPiece = null;
@@ -145,7 +146,8 @@ function executeMove(move) {
         updateCurrentPlayerDisplay();
         if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Turn switched to ${currentPlayer}.`);
         if (!checkWinCondition() && aiEnabled && currentPlayer === aiPlayer) {
-            setTimeout(makeAIMove, 300);
+            // Use a more robust delay that waits for the DOM to be ready
+            requestAnimationFrame(() => setTimeout(makeAIMove, 100));
         }
     }
     if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Current movesSinceCapture: ${movesSinceCapture}/${MAX_MOVES_WITHOUT_CAPTURE}`);
@@ -196,8 +198,8 @@ function makeAIMove() {
     if (aiStatus) aiStatus.textContent = "AI: Thinking...";
 
     setTimeout(() => {
-        const board = buildBoard();
-        const bestMove = findBestMove(board, aiPlayer);
+        const board = buildBoardFromDOM();
+        const bestMove = findBestMove(board, aiPlayer, aiDifficulty, aiPlayer);
         if (aiStatus) aiStatus.textContent = aiEnabled ? "AI: ON" : "AI: OFF";
 
         if (bestMove) {

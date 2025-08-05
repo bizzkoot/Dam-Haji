@@ -30,7 +30,11 @@ const AI_WEIGHTS = {
 
 // --- PURE (STATE-BASED) AI LOGIC ---
 
-function buildBoard() {
+// This function should NOT be used by the AI during thinking
+// It's only for converting DOM state to AI state at the beginning of AI turn
+// Note: This function reads the current DOM state, so it should be called after
+// any DOM animations or updates have completed
+function buildBoardFromDOM() {
     const board = Array.from({ length: 8 }, () => Array(8).fill(null));
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
@@ -93,7 +97,9 @@ function pureIsValidCapture(board, startRow, startCol, endRow, endCol) {
         }
         return capturedCount === 1;
     } else {
-        if (colDiff !== 2 || Math.abs(rowDiff) !== 2) return false;
+        if (colDiff !== 2) return false;
+        if (piece.color === 'B' && rowDiff !== 2) return false;
+        if (piece.color === 'W' && rowDiff !== -2) return false;
         const midRow = (startRow + endRow) / 2;
         const midCol = (startCol + endCol) / 2;
         const midPiece = board[midRow][midCol];
@@ -118,7 +124,7 @@ function pureGetAvailableCaptureMoves(board, row, col) {
             }
         }
     } else {
-        const dirs = [[-2, -2], [-2, 2], [2, -2], [2, 2]];
+        const dirs = piece.color === 'B' ? [[2, -2], [2, 2]] : [[-2, -2], [-2, 2]];
         for (const [dr, dc] of dirs) {
             const nr = row + dr;
             const nc = col + dc;
@@ -251,13 +257,24 @@ function pureApplyMove(board, move) {
     return newBoard;
 }
 
-function evaluateBoardState(board, player) {
+function evaluateBoardState(board, player, aiDifficulty) {
     const weights = AI_WEIGHTS[aiDifficulty];
     let score = 0;
+    let playerPieces = 0;
+    let opponentPieces = 0;
+    
     for (let r = 0; r < 8; r++) {
         for (let c = 0; c < 8; c++) {
             const cell = board[r][c];
             if (!cell) continue;
+            
+            // Count pieces for capture evaluation
+            if (cell.color === player) {
+                playerPieces++;
+            } else {
+                opponentPieces++;
+            }
+            
             const isPlayer = cell.color === player;
             let pieceValue = weights.pieceValue + (cell.haji ? weights.hajiValue : 0);
             const positionValue = isPlayer ? (player === 'B' ? r / 7 : (7 - r) / 7) : (player === 'B' ? (7 - r) / 7 : r / 7);
@@ -267,12 +284,17 @@ function evaluateBoardState(board, player) {
             score += isPlayer ? total : -total;
         }
     }
+    
+    // Add capture value - more captures = better score for player
+    const captureValue = (playerPieces - opponentPieces) * weights.captureValue;
+    score += captureValue;
+    
     return score;
 }
 
-function minimax(board, depth, isMaximizingPlayer, alpha, beta, player) {
+function minimax(board, depth, isMaximizingPlayer, alpha, beta, player, aiPlayer, aiDifficulty) {
     if (depth === 0) {
-        return evaluateBoardState(board, aiPlayer);
+        return evaluateBoardState(board, player, aiDifficulty);
     }
 
     // NEW: Implement forced capture logic in minimax as well
@@ -292,7 +314,7 @@ function minimax(board, depth, isMaximizingPlayer, alpha, beta, player) {
         let maxEval = -Infinity;
         for (const move of moves) {
             const nextBoard = pureApplyMove(board, move);
-            const evaluation = minimax(nextBoard, depth - 1, false, alpha, beta, player === "B" ? "W" : "B");
+            const evaluation = minimax(nextBoard, depth - 1, false, alpha, beta, player === "B" ? "W" : "B", aiPlayer, aiDifficulty);
             maxEval = Math.max(maxEval, evaluation);
             alpha = Math.max(alpha, evaluation);
             if (beta <= alpha) break;
@@ -302,7 +324,7 @@ function minimax(board, depth, isMaximizingPlayer, alpha, beta, player) {
         let minEval = Infinity;
         for (const move of moves) {
             const nextBoard = pureApplyMove(board, move);
-            const evaluation = minimax(nextBoard, depth - 1, true, alpha, beta, player === "B" ? "W" : "B");
+            const evaluation = minimax(nextBoard, depth - 1, true, alpha, beta, player === "B" ? "W" : "B", aiPlayer, aiDifficulty);
             minEval = Math.min(minEval, evaluation);
             beta = Math.min(beta, evaluation);
             if (beta <= alpha) break;
@@ -311,7 +333,7 @@ function minimax(board, depth, isMaximizingPlayer, alpha, beta, player) {
     }
 }
 
-function findBestMove(board, player) {
+function findBestMove(board, player, aiDifficulty, aiPlayer) {
     const depth = { easy: 1, medium: 3, hard: 5 }[aiDifficulty];
     let bestMove = null;
     let bestValue = -Infinity;
@@ -325,13 +347,32 @@ function findBestMove(board, player) {
     // If no forced captures, consider regular moves
     const moves = mustCapture ? captureMoves : (captureMoves.length > 0 ? captureMoves : regularMoves);
 
+    // --- AI DIAGNOSTIC LOGGING ---
+    console.log(`[AI DEBUG] Board state at start of AI turn for player ${player}:`);
+    console.table(board.map(row => row.map(p => p ? `${p.color}${p.haji ? 'H' : ''}` : '.')));
+    console.log(`[AI DEBUG] Turn: ${player}`);
+    console.log(`[AI DEBUG] Forced Capture Active: ${mustCapture}`);
+    console.log(`[AI DEBUG] Found ${captureMoves.length} capture moves:`, captureMoves.map(m => `(${m.startRow},${m.startCol})->(${m.endRow},${m.endCol})`));
+    console.log(`[AI DEBUG] Found ${regularMoves.length} regular moves:`, regularMoves.map(m => `(${m.startRow},${m.startCol})->(${m.endRow},${m.endCol})`));
+    console.log(`[AI DEBUG] Moves being considered by AI:`, moves.map(m => `(${m.startRow},${m.startCol})->(${m.endRow},${m.endCol})`));
+    // --- END AI DIAGNOSTIC LOGGING ---
+
     for (const move of moves) {
         const nextBoard = pureApplyMove(board, move);
-        const val = minimax(nextBoard, depth - 1, false, -Infinity, Infinity, player === "B" ? "W" : "B");
+        const val = minimax(nextBoard, depth - 1, false, -Infinity, Infinity, player === "B" ? "W" : "B", aiPlayer, aiDifficulty);
         if (val > bestValue) {
             bestValue = val;
             bestMove = move;
         }
     }
+
+    // --- AI DIAGNOSTIC LOGGING ---
+    if (bestMove) {
+        console.log(`[AI DEBUG] Best move found: (${bestMove.startRow},${bestMove.startCol})->(${bestMove.endRow},${bestMove.endCol}) with value: ${bestValue}`);
+    } else {
+        console.log(`[AI DEBUG] No best move found.`);
+    }
+    // --- END AI DIAGNOSTIC LOGGING ---
+    
     return bestMove;
 }

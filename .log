@@ -1,0 +1,125 @@
+MOVE: Player B moves from [2,5] to [3,6] (Capture: false) script.js:80:13
+[AI DEBUG] Board state at start of AI turn for player W: ai.js:351:13
+console.table() ai.js:352:13
+(index)	0	1	2	3	4	5	6	7
+0	.	B	.	B	.	B	.	B
+1	B	.	B	.	B	.	B	.
+2	.	B	.	B	.	.	.	B
+3	.	.	.	.	.	.	B	.
+4	.	.	.	.	.	.	.	.
+5	W	.	W	.	W	.	W	.
+6	.	W	.	W	.	W	.	W
+7	W	.	W	.	W	.	W	.
+[AI DEBUG] Turn: W ai.js:353:13
+[AI DEBUG] Forced Capture Active: false ai.js:354:13
+[AI DEBUG] Found 0 capture moves: 
+Array []
+ai.js:355:13
+[AI DEBUG] Found 7 regular moves: 
+Array(7) [ "(5,0)->(4,1)", "(5,2)->(4,1)", "(5,2)->(4,3)", "(5,4)->(4,3)", "(5,4)->(4,5)", "(5,6)->(4,5)", "(5,6)->(4,7)" ]
+ai.js:356:13
+[AI DEBUG] Moves being considered by AI: 
+Array(7) [ "(5,0)->(4,1)", "(5,2)->(4,1)", "(5,2)->(4,3)", "(5,4)->(4,3)", "(5,4)->(4,5)", "(5,6)->(4,5)", "(5,6)->(4,7)" ]
+ai.js:357:13
+[AI DEBUG] Best move found: (5,6)->(4,5) with value: -0.02142857142856691 ai.js:371:17
+MOVE: Player W moves from [5,6] to [4,5] (Capture: false) script.js:80:13
+MOVE: Player B moves from [1,6] to [2,5] (Capture: false) script.js:80:13
+[AI DEBUG] Board state at start of AI turn for player W: ai.js:351:13
+console.table() ai.js:352:13
+(index)	0	1	2	3	4	5	6	7
+0	.	B	.	B	.	B	.	B
+1	B	.	B	.	B	.	.	.
+2	.	B	.	B	.	B	.	B
+3	.	.	.	.	.	.	B	.
+4	.	.	.	.	.	W	.	.
+5	W	.	W	.	W	.	.	.
+6	.	W	.	W	.	W	.	W
+7	W	.	W	.	W	.	W	.
+[AI DEBUG] Turn: W ai.js:353:13
+[AI DEBUG] Forced Capture Active: false ai.js:354:13
+[AI DEBUG] Found 0 capture moves: 
+Array []
+ai.js:355:13
+[AI DEBUG] Found 7 regular moves: 
+Array(7) [ "(4,5)->(3,4)", "(5,0)->(4,1)", "(5,2)->(4,1)", "(5,2)->(4,3)", "(5,4)->(4,3)", "(6,5)->(5,6)", "(6,7)->(5,6)" ]
+ai.js:356:13
+[AI DEBUG] Moves being considered by AI: 
+Array(7) [ "(4,5)->(3,4)", "(5,0)->(4,1)", "(5,2)->(4,1)", "(5,2)->(4,3)", "(5,4)->(4,3)", "(6,5)->(5,6)", "(6,7)->(5,6)" ]
+ai.js:357:13
+[AI DEBUG] Best move found: (4,5)->(3,4) with value: 22.321428571428577 ai.js:371:17
+MOVE: Player W moves from [4,5] to [3,4] (Capture: false) script.js:80:13
+MOVE: Player B moves from [2,5] to [4,3] (Capture: true) script.js:80:13
+[AI DEBUG] Board state at start of AI turn for player W: ai.js:351:13
+console.table() ai.js:352:13
+(index)	0	1	2	3	4	5	6	7
+0	.	B	.	B	.	B	.	B
+1	B	.	B	.	B	.	.	.
+2	.	B	.	B	.	.	.	B
+3	.	.	.	.	W	.	B	.
+4	.	.	.	B	.	.	.	.
+5	W	.	W	.	W	.	.	.
+6	.	W	.	W	.	W	.	W
+7	W	.	W	.	W	.	W	.
+[AI DEBUG] Turn: W ai.js:353:13
+[AI DEBUG] Forced Capture Active: true ai.js:354:13
+[AI DEBUG] Found 1 capture moves: 
+Array [ "(5,4)->(3,2)" ]
+ai.js:355:13
+[AI DEBUG] Found 6 regular moves: 
+Array(6) [ "(3,4)->(2,5)", "(5,0)->(4,1)", "(5,2)->(4,1)", "(5,4)->(4,5)", "(6,5)->(5,6)", "(6,7)->(5,6)" ]
+ai.js:356:13
+[AI DEBUG] Moves being considered by AI: 
+Array [ "(5,4)->(3,2)" ]
+ai.js:357:13
+[AI DEBUG] Best move found: (5,4)->(3,2) with value: 0.08571428571429074 ai.js:371:17
+MOVE: Player W moves from [5,4] to [3,2] (Capture: true) script.js:80:13
+MOVE: Player B moves from [2,1] to [4,3] (Capture: true) script.js:80:13
+[AI DEBUG] Board state at start of AI turn for player W: ai.js:351:13
+console.table() ai.js:352:13
+(index)	0	1	2	3	4	5	6	7
+0	.	B	.	B	.	B	.	B
+1	B	.	B	.	B	.	.	.
+2	.	.	.	B	.	.	.	B
+3	.	.	W	.	.	.	B	.
+4	.	.	.	B	.	.	.	.
+5	W	.	W	.	.	.	.	.
+6	.	W	.	W	.	W	.	W
+7	W	.	W	.	W	.	W	.
+[AI DEBUG] Turn: W ai.js:353:13
+[AI DEBUG] Forced Capture Active: true ai.js:354:13
+[AI DEBUG] Found 1 capture moves: 
+Array [ "(5,2)->(3,4)" ]
+ai.js:355:13
+[AI DEBUG] Found 7 regular moves: 
+Array(7) [ "(3,2)->(2,1)", "(5,0)->(4,1)", "(5,2)->(4,1)", "(6,3)->(5,4)", "(6,5)->(5,4)", "(6,5)->(5,6)", "(6,7)->(5,6)" ]
+ai.js:356:13
+[AI DEBUG] Moves being considered by AI: 
+Array [ "(5,2)->(3,4)" ]
+ai.js:357:13
+[AI DEBUG] Best move found: (5,2)->(3,4) with value: -44.51428571428571 ai.js:371:17
+MOVE: Player W moves from [5,2] to [3,4] (Capture: true) script.js:80:13
+MOVE: Player B moves from [2,3] to [4,5] (Capture: true) script.js:80:13
+[AI DEBUG] Board state at start of AI turn for player W: ai.js:351:13
+console.table() ai.js:352:13
+(index)	0	1	2	3	4	5	6	7
+0	.	B	.	B	.	B	.	B
+1	B	.	B	.	B	.	.	.
+2	.	.	.	.	.	.	.	B
+3	.	.	.	.	W	.	B	.
+4	.	.	.	.	.	B	.	.
+5	W	.	.	.	.	.	.	.
+6	.	W	.	W	.	W	.	W
+7	W	.	W	.	W	.	W	.
+[AI DEBUG] Turn: W ai.js:353:13
+[AI DEBUG] Forced Capture Active: false ai.js:354:13
+[AI DEBUG] Found 0 capture moves: 
+Array []
+ai.js:355:13
+[AI DEBUG] Found 9 regular moves: 
+Array(9) [ "(3,4)->(2,3)", "(3,4)->(2,5)", "(5,0)->(4,1)", "(6,1)->(5,2)", "(6,3)->(5,2)", "(6,3)->(5,4)", "(6,5)->(5,4)", "(6,5)->(5,6)", "(6,7)->(5,6)" ]
+ai.js:356:13
+[AI DEBUG] Moves being considered by AI: 
+Array(9) [ "(3,4)->(2,3)", "(3,4)->(2,5)", "(5,0)->(4,1)", "(6,1)->(5,2)", "(6,3)->(5,2)", "(6,3)->(5,4)", "(6,5)->(5,4)", "(6,5)->(5,6)", "(6,7)->(5,6)" ]
+ai.js:357:13
+[AI DEBUG] Best move found: (3,4)->(2,3) with value: 44.57857142857143 ai.js:371:17
+MOVE: Player W moves from [3,4] to [2,3] (Capture: false) script.js:80:13
