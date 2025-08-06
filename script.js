@@ -247,7 +247,15 @@ function resetGame() {
   updateScore();
   updateCurrentPlayerDisplay();
   updateAIDisplay();
-  document.getElementById('win-modal').classList.add('hidden');
+  
+  // Clear any celebration animations and hide win modal
+  document.querySelectorAll('.piece-celebration').forEach(piece => {
+    piece.classList.remove('piece-celebration');
+  });
+  const winModal = document.getElementById('win-modal');
+  winModal.classList.add('hidden');
+  winModal.classList.remove('win-animation-black', 'win-animation-white');
+  
   if (aiEnabled && currentPlayer === aiPlayer) {
     setTimeout(makeAIMove, 500);
   }
@@ -256,14 +264,34 @@ function resetGame() {
 function showWinMessage(winner) {
   const winModal = document.getElementById('win-modal');
   const winMessage = document.getElementById('win-message');
+  
+  // Clear any existing animation classes
+  winModal.classList.remove('win-animation-black', 'win-animation-white');
+  
   if (winner === "Draw") {
       winMessage.textContent = "It's a Draw!";
+      // No specific animation for draw
   } else {
       winMessage.textContent = `${winner} wins!`;
-      // Determine confetti color based on winner
+      
+      // Apply appropriate win animation class using existing CSS
+      if (winner === "Black") {
+          winModal.classList.add('win-animation-black');
+      } else if (winner === "White") {
+          winModal.classList.add('win-animation-white');
+      }
+      
+      // Add celebration animation to winning pieces using existing CSS
+      const winningPieces = document.querySelectorAll(`.piece.${winner.toLowerCase()}`);
+      winningPieces.forEach(piece => {
+          piece.classList.add('piece-celebration');
+      });
+      
+      // Use existing confetti animation
       const confettiColor = winner === "Black" ? "#ffd700" : "#4ecdc4";
       confetti(confettiColor);
   }
+  
   winModal.classList.remove('hidden');
 }
 
@@ -374,20 +402,17 @@ const hajiCaptureScenario = {
 
 // Define a scenario for testing win animations
 const winAnimationScenario = {
-    // Purpose: Demonstrate a straightforward two-move sequence that results in a win state trigger.
-    // Move 1: Haji from (2,3) to (4,5) capturing the white at (3,4)
-    // Move 2: Black regular from (4,1) to (2,3) capturing the white at (3,2)
+    // Purpose: Simple scenario that results in Black winning by capturing all White pieces
+    // This scenario sets up a board where Black can win in one move by capturing the last White piece
     initialBoard: [
-        { row: 2, col: 3, color: 'black', isHaji: true },   // Black Haji at [2,3]
-        { row: 4, col: 1, color: 'black', isHaji: false },  // Black regular at [4,1]
-        { row: 3, col: 4, color: 'white', isHaji: false },  // White at [3,4] (capturable by Haji)
-        { row: 3, col: 2, color: 'white', isHaji: false }   // White at [3,2] for second capture
-        // Note: (2,3) becomes empty after the Haji moves in move 1, enabling the landing for move 2.
+        { row: 2, col: 1, color: 'black', isHaji: false },  // Black piece
+        { row: 3, col: 2, color: 'white', isHaji: false },  // White piece to be captured (last white piece)
+        { row: 5, col: 4, color: 'black', isHaji: false },  // Another black piece
+        { row: 6, col: 5, color: 'black', isHaji: false }   // Another black piece
     ],
     startingPlayer: 'B',
     moves: [
-        { startRow: 2, startCol: 3, endRow: 4, endCol: 5 }, // Haji capture
-        { startRow: 4, startCol: 1, endRow: 2, endCol: 3 }  // Regular capture over (3,2)
+        { startRow: 2, startCol: 1, endRow: 4, endCol: 3 }  // Black captures white (this should win)
     ]
 };
 
@@ -416,6 +441,12 @@ const endGameScenario = {
 //   showWinMessage(winner);
 // }
 
+// Test function to trigger win animation directly
+function testWinAnimationDirect(winner = 'Black') {
+    console.log(`Testing ${winner} win animation directly...`);
+    showWinMessage(winner);
+}
+
 
 
 // Add debug button to HTML
@@ -432,20 +463,38 @@ function addDebugButton() {
     };
 
     // Create buttons
-    const endGameTestBtn = createDebugButton('debug-endgame-test', 'Test End Game', () => setupAndPlayScenario(endGameScenario));
-    const hajiTestBtn = createDebugButton('debug-haji-test', 'Test Haji Capture', () => setupAndPlayScenario(hajiCaptureScenario));
-    const winTestBtn = createDebugButton('debug-win-test', 'Test Win Animation', () => setupAndPlayScenario(winAnimationScenario));
-    // Remove direct win modal triggers to standardize on scenario flows
-    // const blackWinBtn = createDebugButton('debug-black-win', 'Test Black Win', () => testWinAnimation('Black'));
-    // const whiteWinBtn = createDebugButton('debug-white-win', 'Test White Win', () => testWinAnimation('White'));
-    const playScenarioBtn = createDebugButton('debug-play-scenario', 'Play Capture Scenario', () => setupAndPlayScenario(captureScenario));
+    const endGameTestBtn = createDebugButton('debug-endgame-test', 'Test End Game', () => {
+        document.getElementById('debug-modal').classList.add('hidden');
+        setupAndPlayScenario(endGameScenario);
+    });
+    const hajiTestBtn = createDebugButton('debug-haji-test', 'Test Haji Capture', () => {
+        document.getElementById('debug-modal').classList.add('hidden');
+        setupAndPlayScenario(hajiCaptureScenario);
+    });
+    const winTestBtn = createDebugButton('debug-win-test', 'Test Win Animation', () => {
+        document.getElementById('debug-modal').classList.add('hidden');
+        setupAndPlayScenario(winAnimationScenario);
+    });
+    // Add direct win animation test buttons
+    const blackWinBtn = createDebugButton('debug-black-win', 'Test Black Win Direct', () => {
+        document.getElementById('debug-modal').classList.add('hidden');
+        testWinAnimationDirect('Black');
+    });
+    const whiteWinBtn = createDebugButton('debug-white-win', 'Test White Win Direct', () => {
+        document.getElementById('debug-modal').classList.add('hidden');
+        testWinAnimationDirect('White');
+    });
+    const playScenarioBtn = createDebugButton('debug-play-scenario', 'Play Capture Scenario', () => {
+        document.getElementById('debug-modal').classList.add('hidden');
+        setupAndPlayScenario(captureScenario);
+    });
 
     // Append buttons to container
     debugButtonsContainer.appendChild(endGameTestBtn);
     debugButtonsContainer.appendChild(hajiTestBtn);
     debugButtonsContainer.appendChild(winTestBtn);
-    // debugButtonsContainer.appendChild(blackWinBtn);
-    // debugButtonsContainer.appendChild(whiteWinBtn);
+    debugButtonsContainer.appendChild(blackWinBtn);
+    debugButtonsContainer.appendChild(whiteWinBtn);
     debugButtonsContainer.appendChild(playScenarioBtn);
   }
 }

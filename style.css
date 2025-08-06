@@ -377,7 +377,40 @@ h1 {
 
 /* Victory Modal Animation */
 #win-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+  text-align: center;
+  z-index: 1000;
+  min-width: 300px;
   animation: modalAppear 0.5s ease-out;
+}
+
+#win-message {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: inherit;
+}
+
+#play-again {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#play-again:hover {
+  background-color: #45a049;
 }
 
 @keyframes modalAppear {
