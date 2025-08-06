@@ -14,6 +14,736 @@ let movesSinceCapture = 0;
 const MAX_MOVES_WITHOUT_CAPTURE = 50;
 let detailedDebugLoggingEnabled = false;
 
+// --- PHASE 1: MOVE HISTORY AND STATE MANAGEMENT FUNCTIONS ---
+
+function addMoveToHistory(move) {
+    // Remove any moves after current index (for undo/redo)
+    moveHistory = moveHistory.slice(0, currentMoveIndex + 1);
+    
+    const gameMove = new GameMove(
+        move.piece,
+        move.startRow,
+        move.startCol,
+        move.endRow,
+        move.endCol,
+        move.isCapture,
+        move.capturedPieces,
+        move.isHajiPromotion
+    );
+    
+    moveHistory.push(gameMove);
+    currentMoveIndex = moveHistory.length - 1;
+    
+    updateMoveHistoryDisplay();
+}
+
+function updateMoveHistoryDisplay() {
+    const moveList = document.getElementById('move-list');
+    if (!moveList) return;
+    
+    moveList.innerHTML = '';
+    
+    moveHistory.forEach((move, index) => {
+        const moveEntry = createMoveEntry(move, index);
+        moveList.appendChild(moveEntry);
+    });
+    
+    // Scroll to latest move
+    moveList.scrollTop = moveList.scrollHeight;
+}
+
+function createMoveEntry(move, index) {
+    const entry = document.createElement('div');
+    entry.className = `move-entry ${move.player === 'B' ? 'black' : 'white'}`;
+    if (index === currentMoveIndex) {
+        entry.classList.add('current');
+    }
+    
+    const moveNumber = document.createElement('span');
+    moveNumber.className = 'move-number';
+    moveNumber.textContent = move.moveNumber;
+    
+    const description = document.createElement('span');
+    description.className = 'move-description';
+    description.innerHTML = formatMoveDescription(move);
+    
+    entry.appendChild(moveNumber);
+    entry.appendChild(description);
+    
+    // Add click handler for move review
+    entry.addEventListener('click', () => reviewMove(index));
+    
+    return entry;
+}
+
+function formatMoveDescription(move) {
+    const startPos = `${String.fromCharCode(97 + move.startCol)}${8 - move.startRow}`;
+    const endPos = `${String.fromCharCode(97 + move.endCol)}${8 - move.endRow}`;
+    let description = `${startPos} → ${endPos}`;
+    
+    if (move.isCapture) {
+        description += ` <span class="move-capture">(×${move.capturedPieces.length})</span>`;
+    }
+    
+    if (move.isHajiPromotion) {
+        description += ` <span class="move-haji">(Haji)</span>`;
+    }
+    
+    return description;
+}
+
+function reviewMove(moveIndex) {
+    if (moveIndex >= 0 && moveIndex < moveHistory.length) {
+        // Highlight the move in history
+        document.querySelectorAll('.move-entry').forEach(entry => entry.classList.remove('current'));
+        document.querySelectorAll('.move-entry')[moveIndex]?.classList.add('current');
+        
+        // Could implement move replay here in future
+        showNotification(`Reviewing move ${moveIndex + 1}`, 'info');
+    }
+}
+
+// --- UNDO/REDO FUNCTIONALITY ---
+
+function saveGameState() {
+    // Remove states after current index
+    gameStates = gameStates.slice(0, currentStateIndex + 1);
+    
+    const newState = new GameState(null, currentPlayer, { blackScore, whiteScore }, moveHistory);
+    
+    gameStates.push(newState);
+    currentStateIndex = gameStates.length - 1;
+    
+    // Limit states to prevent memory issues
+    if (gameStates.length > MAX_STATES) {
+        gameStates.shift();
+        currentStateIndex--;
+    }
+    
+    updateUndoRedoButtons();
+}
+
+function undoMove() {
+    if (currentStateIndex > 0) {
+        currentStateIndex--;
+        restoreGameState(currentStateIndex);
+        updateCurrentPlayerDisplay();
+        updateScore();
+        updateMoveHistoryDisplay();
+        updateUndoRedoButtons();
+        showNotification('Move undone', 'info');
+        
+        // Clear any ongoing selections
+        clearHighlights();
+        selectedPiece = null;
+    }
+}
+
+function redoMove() {
+    if (currentStateIndex < gameStates.length - 1) {
+        currentStateIndex++;
+        restoreGameState(currentStateIndex);
+        updateCurrentPlayerDisplay();
+        updateScore();
+        updateMoveHistoryDisplay();
+        updateUndoRedoButtons();
+        showNotification('Move redone', 'info');
+        
+        // Clear any ongoing selections
+        clearHighlights();
+        selectedPiece = null;
+    }
+}
+
+function restoreGameState(stateIndex) {
+    if (stateIndex < 0 || stateIndex >= gameStates.length) return;
+    
+    const state = gameStates[stateIndex];
+    
+    // Restore board state by updating existing board
+    const board = document.getElementById('game-board');
+    board.innerHTML = '';
+    
+    for (let row = 0; row < 8; row++) {
+        const rowElement = document.createElement('div');
+        rowElement.classList.add('board-row');
+        
+        for (let col = 0; col < 8; col++) {
+            const cell = document.createElement('div');
+            cell.classList.add('board-cell');
+            cell.dataset.row = row;
+            cell.dataset.col = col;
+            
+            if ((row + col) % 2 === 0) {
+                cell.classList.add('light');
+            } else {
+                cell.classList.add('dark');
+                
+                const pieceData = state.boardState[row][col];
+                if (pieceData) {
+                    const piece = document.createElement('div');
+                    piece.classList.add('piece', pieceData.color);
+                    if (pieceData.isHaji) {
+                        piece.classList.add('haji');
+                    }
+                    cell.appendChild(piece);
+                }
+            }
+            rowElement.appendChild(cell);
+        }
+        board.appendChild(rowElement);
+    }
+    
+    // Reattach event listeners to the board
+    board.querySelectorAll('.board-cell').forEach(square => {
+        square.addEventListener('click', handleClick);
+    });
+    
+    // Restore game variables
+    currentPlayer = state.currentPlayer;
+    blackScore = state.scores.blackScore;
+    whiteScore = state.scores.whiteScore;
+    moveHistory = [...state.moveHistory];
+    currentMoveIndex = moveHistory.length - 1;
+    
+    // Update UI to reflect restored state
+    updateScore();
+    
+    // Clear any ongoing drag operations
+    cleanupDragState();
+}
+
+function updateUndoRedoButtons() {
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    
+    if (undoBtn) {
+        undoBtn.disabled = currentStateIndex <= 0;
+        undoBtn.classList.toggle('disabled', currentStateIndex <= 0);
+    }
+    
+    if (redoBtn) {
+        redoBtn.disabled = currentStateIndex >= gameStates.length - 1;
+        redoBtn.classList.toggle('disabled', currentStateIndex >= gameStates.length - 1);
+    }
+}
+
+// --- GAME STATE PERSISTENCE ---
+
+function saveGameToSlot(slotNumber) {
+    try {
+        const currentState = gameStates[currentStateIndex];
+        if (!currentState) return false;
+        
+        const saveData = new GameSaveData(currentState, {
+            slotNumber,
+            currentPlayer,
+            blackScore,
+            whiteScore,
+            aiEnabled,
+            aiDifficulty,
+            gameDuration: Date.now() - gameStartTime
+        });
+        
+        const saves = getSavedGames();
+        saves[slotNumber] = saveData;
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saves));
+        
+        updateSaveLoadUI();
+        showNotification(`Game saved to slot ${slotNumber + 1}`, 'success');
+        return true;
+    } catch (error) {
+        console.error('Error saving game:', error);
+        showNotification('Failed to save game', 'error');
+        return false;
+    }
+}
+
+function loadGameFromSlot(slotNumber) {
+    try {
+        const saves = getSavedGames();
+        const saveData = saves[slotNumber];
+        
+        if (!saveData) {
+            showNotification('No saved game found in this slot', 'warning');
+            return false;
+        }
+        
+        // Validate save data version
+        if (saveData.metadata.version !== '1.4.0') {
+            showNotification('Save file version incompatible', 'error');
+            return false;
+        }
+        
+        // Restore game state
+        gameStates = [saveData.gameState];
+        currentStateIndex = 0;
+        
+        // Restore game variables
+        currentPlayer = saveData.metadata.currentPlayer;
+        blackScore = saveData.metadata.blackScore;
+        whiteScore = saveData.metadata.whiteScore;
+        aiEnabled = saveData.metadata.aiEnabled;
+        aiDifficulty = saveData.metadata.aiDifficulty;
+        
+        // Update UI to reflect restored state
+        updateScore();
+        
+        // Restore board by recreating it
+        const board = document.getElementById('game-board');
+        board.innerHTML = '';
+        
+        for (let row = 0; row < 8; row++) {
+            const rowElement = document.createElement('div');
+            rowElement.classList.add('board-row');
+            
+            for (let col = 0; col < 8; col++) {
+                const cell = document.createElement('div');
+                cell.classList.add('board-cell');
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                
+                if ((row + col) % 2 === 0) {
+                    cell.classList.add('light');
+                } else {
+                    cell.classList.add('dark');
+                    
+                    const pieceData = saveData.gameState.boardState[row][col];
+                    if (pieceData) {
+                        const piece = document.createElement('div');
+                        piece.classList.add('piece', pieceData.color);
+                        if (pieceData.isHaji) {
+                            piece.classList.add('haji');
+                        }
+                        cell.appendChild(piece);
+                    }
+                }
+                rowElement.appendChild(cell);
+            }
+            board.appendChild(rowElement);
+        }
+        
+        // Reattach event listeners
+        board.querySelectorAll('.board-cell').forEach(square => {
+            square.addEventListener('click', handleClick);
+        });
+        
+        // Update UI
+        updateCurrentPlayerDisplay();
+        updateAIDisplay();
+        updateSaveLoadUI();
+        
+        showNotification(`Game loaded from slot ${slotNumber + 1}`, 'success');
+        return true;
+    } catch (error) {
+        console.error('Error loading game:', error);
+        showNotification('Failed to load game', 'error');
+        return false;
+    }
+}
+
+function getSavedGames() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+        console.error('Error reading saved games:', error);
+        return {};
+    }
+}
+
+function deleteSavedGame(slotNumber) {
+    try {
+        const saves = getSavedGames();
+        delete saves[slotNumber];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saves));
+        
+        updateSaveLoadUI();
+        showNotification(`Saved game in slot ${slotNumber + 1} deleted`, 'info');
+    } catch (error) {
+        console.error('Error deleting saved game:', error);
+        showNotification('Failed to delete saved game', 'error');
+    }
+}
+
+// Auto-save functionality
+let autoSaveInterval = null;
+const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
+
+function startAutoSave() {
+    if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+    }
+    
+    autoSaveInterval = setInterval(() => {
+        if (gameStates.length > 0) {
+            autoSaveGame();
+        }
+    }, AUTO_SAVE_INTERVAL);
+}
+
+function stopAutoSave() {
+    if (autoSaveInterval) {
+        clearInterval(autoSaveInterval);
+        autoSaveInterval = null;
+    }
+}
+
+function autoSaveGame() {
+    try {
+        const autoSaveData = new GameSaveData(gameStates[currentStateIndex], {
+            slotNumber: -1, // Auto-save slot
+            currentPlayer,
+            blackScore,
+            whiteScore,
+            aiEnabled,
+            aiDifficulty,
+            gameDuration: Date.now() - gameStartTime,
+            isAutoSave: true
+        });
+        
+        localStorage.setItem('dam_haji_autosave', JSON.stringify(autoSaveData));
+    } catch (error) {
+        console.error('Auto-save failed:', error);
+    }
+}
+
+function checkForAutoSave() {
+    try {
+        const autoSaveData = localStorage.getItem('dam_haji_autosave');
+        if (autoSaveData) {
+            const saveData = JSON.parse(autoSaveData);
+            const saveDate = new Date(saveData.metadata.saveDate);
+            const now = new Date();
+            const hoursSinceSave = (now - saveDate) / (1000 * 60 * 60);
+            
+            if (hoursSinceSave < 24) { // Only offer recovery for saves less than 24 hours old
+                showAutoSaveRecoveryDialog(saveData);
+            } else {
+                localStorage.removeItem('dam_haji_autosave');
+            }
+        }
+    } catch (error) {
+        console.error('Error checking auto-save:', error);
+    }
+}
+
+function showAutoSaveRecoveryDialog(saveData) {
+    if (confirm('An auto-saved game was found. Would you like to restore it?')) {
+        // Restore auto-save
+        gameStates = [saveData.gameState];
+        currentStateIndex = 0;
+        currentPlayer = saveData.metadata.currentPlayer;
+        blackScore = saveData.metadata.blackScore;
+        whiteScore = saveData.metadata.whiteScore;
+        aiEnabled = saveData.metadata.aiEnabled;
+        aiDifficulty = saveData.metadata.aiDifficulty;
+        
+        // Update UI to reflect restored state
+        updateScore();
+        
+        // Restore board by recreating it
+        const board = document.getElementById('game-board');
+        board.innerHTML = '';
+        
+        for (let row = 0; row < 8; row++) {
+            const rowElement = document.createElement('div');
+            rowElement.classList.add('board-row');
+            
+            for (let col = 0; col < 8; col++) {
+                const cell = document.createElement('div');
+                cell.classList.add('board-cell');
+                cell.dataset.row = row;
+                cell.dataset.col = col;
+                
+                if ((row + col) % 2 === 0) {
+                    cell.classList.add('light');
+                } else {
+                    cell.classList.add('dark');
+                    
+                    const pieceData = saveData.gameState.boardState[row][col];
+                    if (pieceData) {
+                        const piece = document.createElement('div');
+                        piece.classList.add('piece', pieceData.color);
+                        if (pieceData.isHaji) {
+                            piece.classList.add('haji');
+                        }
+                        cell.appendChild(piece);
+                    }
+                }
+                rowElement.appendChild(cell);
+            }
+            board.appendChild(rowElement);
+        }
+        
+        // Reattach event listeners
+        board.querySelectorAll('.board-cell').forEach(square => {
+            square.addEventListener('click', handleClick);
+        });
+        updateCurrentPlayerDisplay();
+        updateAIDisplay();
+        showNotification('Auto-saved game restored', 'success');
+    } else {
+        localStorage.removeItem('dam_haji_autosave');
+    }
+}
+
+// --- UI HELPER FUNCTIONS ---
+
+function cleanupDragState() {
+    // Clear any ongoing drag operations
+    selectedPiece = null;
+    clearHighlights();
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function updateSaveLoadUI() {
+    const saveSlots = document.getElementById('save-slots');
+    const loadSlots = document.getElementById('load-slots');
+    
+    if (saveSlots) {
+        saveSlots.innerHTML = '';
+        for (let i = 0; i < SAVE_SLOTS; i++) {
+            const slot = createSaveSlot(i);
+            saveSlots.appendChild(slot);
+        }
+    }
+    
+    if (loadSlots) {
+        loadSlots.innerHTML = '';
+        for (let i = 0; i < SAVE_SLOTS; i++) {
+            const slot = createLoadSlot(i);
+            loadSlots.appendChild(slot);
+        }
+    }
+}
+
+function createSaveSlot(slotNumber) {
+    const slot = document.createElement('div');
+    const saves = getSavedGames();
+    const saveData = saves[slotNumber];
+    
+    slot.className = `save-slot ${saveData ? '' : 'empty'}`;
+    
+    const info = document.createElement('div');
+    info.className = 'slot-info';
+    
+    if (saveData) {
+        const saveDate = new Date(saveData.metadata.saveDate);
+        info.innerHTML = `
+            <strong>Slot ${slotNumber + 1}</strong><br>
+            <small>${saveDate.toLocaleString()}</small><br>
+            <small>Player: ${saveData.metadata.currentPlayer === 'B' ? 'Black' : 'White'}</small>
+        `;
+    } else {
+        info.innerHTML = `<strong>Slot ${slotNumber + 1}</strong><br><small>Empty</small>`;
+    }
+    
+    const actions = document.createElement('div');
+    actions.className = 'slot-actions';
+    
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save';
+    saveBtn.onclick = () => saveGameToSlot(slotNumber);
+    
+    actions.appendChild(saveBtn);
+    
+    if (saveData) {
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.onclick = () => deleteSavedGame(slotNumber);
+        actions.appendChild(deleteBtn);
+    }
+    
+    slot.appendChild(info);
+    slot.appendChild(actions);
+    
+    return slot;
+}
+
+function createLoadSlot(slotNumber) {
+    const slot = document.createElement('div');
+    const saves = getSavedGames();
+    const saveData = saves[slotNumber];
+    
+    slot.className = `load-slot ${saveData ? '' : 'empty'}`;
+    
+    const info = document.createElement('div');
+    info.className = 'slot-info';
+    
+    if (saveData) {
+        const saveDate = new Date(saveData.metadata.saveDate);
+        info.innerHTML = `
+            <strong>Slot ${slotNumber + 1}</strong><br>
+            <small>${saveDate.toLocaleString()}</small><br>
+            <small>Player: ${saveData.metadata.currentPlayer === 'B' ? 'Black' : 'White'}</small>
+        `;
+    } else {
+        info.innerHTML = `<strong>Slot ${slotNumber + 1}</strong><br><small>Empty</small>`;
+    }
+    
+    const actions = document.createElement('div');
+    actions.className = 'slot-actions';
+    
+    if (saveData) {
+        const loadBtn = document.createElement('button');
+        loadBtn.textContent = 'Load';
+        loadBtn.onclick = () => {
+            loadGameFromSlot(slotNumber);
+            closeSaveLoadModal();
+        };
+        actions.appendChild(loadBtn);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.onclick = () => deleteSavedGame(slotNumber);
+        actions.appendChild(deleteBtn);
+    }
+    
+    slot.appendChild(info);
+    slot.appendChild(actions);
+    
+    return slot;
+}
+
+function openSaveLoadModal() {
+    const modal = document.getElementById('save-load-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        updateSaveLoadUI();
+    }
+}
+
+function closeSaveLoadModal() {
+    const modal = document.getElementById('save-load-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function toggleMoveHistory() {
+    const panel = document.getElementById('move-history-panel');
+    const toggleBtn = document.getElementById('toggle-move-history');
+    
+    if (panel) {
+        const isHidden = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', !isHidden);
+        if (toggleBtn) {
+            toggleBtn.textContent = isHidden ? '−' : '+';
+        }
+    }
+}
+
+// Phase 1: Initialize all Phase 1 features
+function initializePhase1Features() {
+    // Initialize move history panel
+    const moveHistoryPanel = document.getElementById('move-history-panel');
+    const toggleMoveHistoryBtn = document.getElementById('toggle-move-history');
+    
+    if (moveHistoryPanel && toggleMoveHistoryBtn) {
+        toggleMoveHistoryBtn.addEventListener('click', toggleMoveHistory);
+    }
+    
+    // Initialize undo/redo buttons
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    
+    if (undoBtn) {
+        undoBtn.addEventListener('click', undoMove);
+    }
+    
+    if (redoBtn) {
+        redoBtn.addEventListener('click', redoMove);
+    }
+    
+    // Initialize save/load buttons
+    const saveGameBtn = document.getElementById('save-game-btn');
+    const loadGameBtn = document.getElementById('load-game-btn');
+    
+    if (saveGameBtn) {
+        saveGameBtn.addEventListener('click', openSaveLoadModal);
+    }
+    
+    if (loadGameBtn) {
+        loadGameBtn.addEventListener('click', openSaveLoadModal);
+    }
+    
+    // Initialize move history button
+    const showMoveHistoryBtn = document.getElementById('show-move-history-btn');
+    if (showMoveHistoryBtn) {
+        showMoveHistoryBtn.addEventListener('click', toggleMoveHistory);
+    }
+    
+    // Initialize save/load modal
+    const saveLoadModal = document.getElementById('save-load-modal');
+    const closeSaveLoadModalBtn = document.getElementById('close-save-load-modal');
+    
+    if (saveLoadModal && closeSaveLoadModalBtn) {
+        closeSaveLoadModalBtn.addEventListener('click', closeSaveLoadModal);
+        
+        // Close modal when clicking outside
+        saveLoadModal.addEventListener('click', (event) => {
+            if (event.target === saveLoadModal) {
+                closeSaveLoadModal();
+            }
+        });
+    }
+    
+    // Initialize tab switching in save/load modal
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const targetTab = btn.dataset.tab;
+            
+            // Update active tab button
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Update active tab content
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === `${targetTab}-tab`) {
+                    content.classList.add('active');
+                }
+            });
+        });
+    });
+    
+    // Initialize keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+        if (event.ctrlKey || event.metaKey) {
+            switch (event.key) {
+                case 'z':
+                    event.preventDefault();
+                    undoMove();
+                    break;
+                case 'y':
+                    event.preventDefault();
+                    redoMove();
+                    break;
+            }
+        }
+    });
+    
+    // Initialize initial game state
+    saveGameState();
+    updateUndoRedoButtons();
+    updateMoveHistoryDisplay();
+}
+
 // --- UI UPDATE FUNCTIONS ---
 
 function confetti(color) {
@@ -89,6 +819,20 @@ function highlightAvailableMoves(piece) {
     }
 }
 
+// Helper function to check if a specific piece can make any moves
+function hasAvailableMovesForPiece(row, col) {
+    const piece = getPiece(row, col);
+    if (!piece) return false;
+    
+    const mustCapture = checkAvailableCaptures(currentPlayer);
+    
+    if (mustCapture) {
+        return getAvailableCaptureMoves(row, col).length > 0;
+    } else {
+        return getAvailableRegularMoves(row, col).length > 0;
+    }
+}
+
 // --- GAME FLOW AND ACTIONS ---
 
 function executeMove(move) {
@@ -104,6 +848,8 @@ function executeMove(move) {
     }
 
     const endCell = document.querySelector(`.board-cell[data-row="${endRow}"][data-col="${endCol}"]`);
+    let capturedPieces = [];
+    let isHajiPromotion = false;
 
     if (isCapture) {
         movesSinceCapture = 0; // Reset counter on capture
@@ -129,8 +875,15 @@ function executeMove(move) {
             if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Captured piece at (${capturedRow}, ${capturedCol})`);
             if (currentPlayer === 'B') blackScore++; else whiteScore++;
             updateScore();
+            capturedPieces.push(capturedCell.firstChild);
             capturedCell.firstChild.classList.add('capture-animation');
-            setTimeout(() => { if(capturedCell) capturedCell.innerHTML = "" }, 500);
+            // Remove captured piece immediately for proper state management
+            // Add a brief flash effect for visual feedback
+            capturedCell.style.backgroundColor = '#ff4444';
+            setTimeout(() => {
+                capturedCell.style.backgroundColor = '';
+            }, 200);
+            capturedCell.innerHTML = "";
         }
     } else {
         movesSinceCapture++; // Increment counter on regular move
@@ -141,16 +894,42 @@ function executeMove(move) {
     if ((endRow === 0 && piece.classList.contains("white")) || (endRow === 7 && piece.classList.contains("black"))) {
         if (!piece.classList.contains("haji")) { // Only log if it's a new promotion
             if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Piece promoted to Haji at (${endRow}, ${endCol})`);
+            isHajiPromotion = true;
         }
         piece.classList.add("haji");
     }
 
     endCell.appendChild(piece);
     
-    if (isCapture && canCaptureAgain(endRow, endCol)) {
-        if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Multiple capture possible. Remaining piece at (${endRow}, ${endCol})`);
+    // Phase 1: Add move to history
+    addMoveToHistory({
+        piece,
+        startRow,
+        startCol,
+        endRow,
+        endCol,
+        isCapture,
+        capturedPieces,
+        isHajiPromotion
+    });
+    
+    // Check if the piece can make additional moves
+    const canMakeAdditionalMoves = (isCapture && canCaptureAgain(endRow, endCol)) || 
+                                  (isHajiPromotion && hasAvailableMovesForPiece(endRow, endCol));
+    
+    if (canMakeAdditionalMoves) {
+        if (detailedDebugLoggingEnabled) {
+            if (isCapture && canCaptureAgain(endRow, endCol)) {
+                console.log(`[DEBUG] Multiple capture possible. Remaining piece at (${endRow}, ${endCol})`);
+            }
+            if (isHajiPromotion && hasAvailableMovesForPiece(endRow, endCol)) {
+                console.log(`[DEBUG] Newly promoted Haji can make additional moves at (${endRow}, ${endCol})`);
+            }
+        }
         selectedPiece = endCell.firstChild;
         highlightAvailableMoves(selectedPiece);
+        // Phase 1: Save game state for undo/redo after additional moves are complete
+        saveGameState();
         if (aiEnabled && currentPlayer === aiPlayer) {
             // Wait for the captured piece to be removed before making the next AI move
             setTimeout(makeAIMove, 600);
@@ -161,6 +940,8 @@ function executeMove(move) {
         currentPlayer = currentPlayer === "B" ? "W" : "B";
         updateCurrentPlayerDisplay();
         if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Turn switched to ${currentPlayer}.`);
+        // Phase 1: Save game state for undo/redo after turn is complete
+        saveGameState();
         if (!checkWinCondition() && aiEnabled && currentPlayer === aiPlayer) {
             // Use a more robust delay that waits for the DOM to be ready
             requestAnimationFrame(() => setTimeout(makeAIMove, 600));
@@ -247,6 +1028,17 @@ function resetGame() {
   updateScore();
   updateCurrentPlayerDisplay();
   updateAIDisplay();
+  
+  // Phase 1: Reset move history and game states
+  moveHistory = [];
+  currentMoveIndex = -1;
+  gameStates = [];
+  currentStateIndex = -1;
+  
+  // Phase 1: Save initial game state
+  saveGameState();
+  updateMoveHistoryDisplay();
+  updateUndoRedoButtons();
   
   // Clear any celebration animations and hide win modal
   document.querySelectorAll('.piece-celebration').forEach(piece => {
@@ -368,6 +1160,15 @@ window.addEventListener('load', () => {
     
     // Add debug button
     addDebugButton();
+    
+    // Phase 1: Initialize Phase 1 features
+    initializePhase1Features();
+    
+    // Phase 1: Check for auto-save recovery
+    checkForAutoSave();
+    
+    // Phase 1: Start auto-save
+    startAutoSave();
 });
 
 // Debug function to set up a Haji capture test scenario

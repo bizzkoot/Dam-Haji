@@ -2,6 +2,80 @@
 // GAME.JS - CORE GAME LOGIC AND STATE
 // =============================================
 
+// --- PHASE 1: MOVE HISTORY AND STATE MANAGEMENT ---
+
+// Move History System
+let moveHistory = [];
+let currentMoveIndex = -1;
+
+// Game State Management for Undo/Redo
+let gameStates = [];
+let currentStateIndex = -1;
+const MAX_STATES = 100; // Prevent memory issues
+
+// Game State Persistence
+const STORAGE_KEY = 'dam_haji_game_state';
+const SAVE_SLOTS = 5;
+let gameStartTime = Date.now();
+
+// Move object structure
+class GameMove {
+    constructor(piece, startRow, startCol, endRow, endCol, isCapture, capturedPieces, isHajiPromotion) {
+        this.piece = piece;
+        this.startRow = startRow;
+        this.startCol = startCol;
+        this.endRow = endRow;
+        this.endCol = endCol;
+        this.isCapture = isCapture;
+        this.capturedPieces = capturedPieces || [];
+        this.isHajiPromotion = isHajiPromotion || false;
+        this.timestamp = Date.now();
+        this.player = piece.classList.contains('black') ? 'B' : 'W';
+        this.moveNumber = moveHistory.length + 1;
+    }
+}
+
+class GameState {
+    constructor(boardState, currentPlayer, scores, moveHistory) {
+        this.boardState = this.serializeBoard();
+        this.currentPlayer = currentPlayer;
+        this.scores = { ...scores };
+        this.moveHistory = [...moveHistory];
+        this.timestamp = Date.now();
+    }
+    
+    serializeBoard() {
+        const serialized = [];
+        for (let row = 0; row < 8; row++) {
+            const rowData = [];
+            for (let col = 0; col < 8; col++) {
+                const piece = getPiece(row, col);
+                if (piece) {
+                    rowData.push({
+                        color: piece.classList.contains('black') ? 'black' : 'white',
+                        isHaji: piece.classList.contains('haji')
+                    });
+                } else {
+                    rowData.push(null);
+                }
+            }
+            serialized.push(rowData);
+        }
+        return serialized;
+    }
+}
+
+class GameSaveData {
+    constructor(gameState, metadata) {
+        this.gameState = gameState;
+        this.metadata = {
+            ...metadata,
+            saveDate: new Date().toISOString(),
+            version: '1.4.0'
+        };
+    }
+}
+
 // --- BOARD AND PIECE HELPERS ---
 
 function getPiece(row, col) {

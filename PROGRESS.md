@@ -3,8 +3,8 @@
 ## 🎯 Current Status: **PRODUCTION READY** ✅
 
 **Last Updated**: January 2025  
-**Version**: v1.4.0 (Next Release)  
-**Status**: All critical bugs resolved, win animations implemented
+**Version**: v1.5.0 (Phase 1 Complete)  
+**Status**: All critical bugs resolved, Phase 1 features implemented
 
 ---
 
@@ -16,13 +16,14 @@
 3. **AI Forced Capture** - AI now follows same rules as players
 4. **Race Condition Fix** - Eliminated "ghost piece" moves
 5. **Win Animation System** - Complete celebration animations implemented
+6. **Haji Promotion Logic** - Fixed additional move allowance for newly promoted Haji pieces
 
-### ✅ **Win Animation System** (Latest Feature)
-- **Confetti Animation**: Gold for Black wins, Teal for White wins
-- **Modal Animations**: Scale/rotate effects with color-coded themes
-- **Piece Celebrations**: Winning pieces bounce and rotate
-- **Auto-Close Debug Modal**: Debug modal closes when tests start
-- **Direct Test Buttons**: Quick win animation testing
+### ✅ **Phase 1 Features** (Latest Implementation)
+- **Move History System**: Complete move tracking with capture indicators and Haji promotions
+- **Undo/Redo Functionality**: Full game state restoration with keyboard shortcuts (Ctrl+Z/Ctrl+Y)
+- **Game State Persistence**: Save/load system with 5 slots and auto-save functionality
+- **Haji Promotion Logic**: Fixed additional move allowance for newly promoted Haji pieces
+- **Enhanced UI**: Move history panel, undo/redo buttons, save/load modal
 
 ---
 
@@ -42,12 +43,14 @@
 - **Capture Animations**: Smooth piece removal effects
 - **Win Animations**: Celebration effects for game completion
 - **Debug System**: Comprehensive testing tools
+- **Phase 1 UI**: Move history panel, undo/redo controls, save/load modal
 
 ### Technical ✅
 - **PWA Support**: Installable as web app
 - **Offline Play**: Works without internet connection
 - **Cross-Browser**: Compatible with all modern browsers
 - **Performance**: Smooth 60fps animations
+- **Phase 1 Features**: Move history, undo/redo, game state persistence
 
 ---
 
@@ -137,17 +140,18 @@ const winTestBtn = createDebugButton('debug-win-test', 'Test Win Animation', () 
 
 ## 🚀 Recent Updates (Latest Session)
 
-### Win Animation Implementation ✅
-- **Added**: Complete win animation system with confetti, modal effects, and piece celebrations
-- **Enhanced**: Debug modal auto-closes when tests start
-- **Improved**: Direct test buttons for quick win animation testing
-- **Fixed**: Modal positioning and styling for better visibility
+### Phase 1 Implementation ✅
+- **Added**: Complete move history system with capture indicators and Haji promotions
+- **Added**: Undo/redo functionality with keyboard shortcuts (Ctrl+Z/Ctrl+Y)
+- **Added**: Game state persistence with 5 save slots and auto-save
+- **Added**: Enhanced UI with move history panel and save/load modal
+- **Fixed**: Haji promotion logic to allow additional moves for newly promoted pieces
 
 ### Code Quality Improvements ✅
-- **Refactored**: Debug functions for better organization
-- **Simplified**: Win animation test scenarios
-- **Enhanced**: Error handling and user feedback
-- **Optimized**: Animation performance and timing
+- **Refactored**: Game state management for proper undo/redo functionality
+- **Enhanced**: AI integration with Phase 1 features
+- **Improved**: Error handling and user feedback for save/load operations
+- **Optimized**: Performance for move history and state restoration
 
 ---
 
@@ -170,7 +174,6 @@ const winTestBtn = createDebugButton('debug-win-test', 'Test Win Animation', () 
 ## 🎯 Future Enhancements
 
 ### Phase 1: User Experience (Medium Priority)
-- [ ] Drag & drop interface
 - [ ] Move history system
 - [ ] Undo/redo functionality
 - [ ] Game state persistence
@@ -199,8 +202,6 @@ const winTestBtn = createDebugButton('debug-win-test', 'Test Win Animation', () 
 - ~~Win animations~~ - Implemented
 
 ### Minor Issues (Non-Critical)
-- Limited move history
-- No undo functionality
 - Basic accessibility features
 - No sound effects
 
