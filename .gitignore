@@ -127,9 +127,12 @@ pnpm-lock.yaml
 # =============================================================================
 # Project specific files
 # =============================================================================
-# Uncomment the following lines if you want to ignore these files:
-# .log                    # Debug log files
-# .cursorrules           # Cursor IDE rules (development only)
+# Debug log files
+.log
+*.log
+
+# Cursor IDE rules (development only)
+.cursorrules
 
 # =============================================================================
 # Documentation build
