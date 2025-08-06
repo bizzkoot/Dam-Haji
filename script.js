@@ -147,7 +147,7 @@ function executeMove(move) {
         if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Turn switched to ${currentPlayer}.`);
         if (!checkWinCondition() && aiEnabled && currentPlayer === aiPlayer) {
             // Use a more robust delay that waits for the DOM to be ready
-            requestAnimationFrame(() => setTimeout(makeAIMove, 100));
+            requestAnimationFrame(() => setTimeout(makeAIMove, 600));
         }
     }
     if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Current movesSinceCapture: ${movesSinceCapture}/${MAX_MOVES_WITHOUT_CAPTURE}`);

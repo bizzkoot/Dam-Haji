@@ -369,6 +369,10 @@ function findBestMove(board, player, aiDifficulty, aiPlayer) {
     // --- AI DIAGNOSTIC LOGGING ---
     if (bestMove) {
         console.log(`[AI DEBUG] Best move found: (${bestMove.startRow},${bestMove.startCol})->(${bestMove.endRow},${bestMove.endCol}) with value: ${bestValue}`);
+    } else if (moves.length > 0) {
+        // If no best move found but moves available, pick random move
+        bestMove = moves[Math.floor(Math.random() * moves.length)];
+        console.log(`[AI DEBUG] No best move found, selecting random move: (${bestMove.startRow},${bestMove.startCol})->(${bestMove.endRow},${bestMove.endCol})`);
     } else {
         console.log(`[AI DEBUG] No best move found.`);
     }
