@@ -16,6 +16,22 @@ let detailedDebugLoggingEnabled = false;
 
 // --- UI UPDATE FUNCTIONS ---
 
+function confetti(color) {
+    for (let i = 0; i < 100; i++) {
+        const piece = document.createElement('div');
+        piece.classList.add('confetti');
+        piece.style.backgroundColor = color;
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.top = `-100vh`;
+        piece.style.width = `${Math.random() * 20 + 10}px`;
+        piece.style.height = `${Math.random() * 20 + 10}px`;
+        document.body.appendChild(piece);
+        setTimeout(() => {
+            piece.remove();
+        }, 3000);
+    }
+}
+
 function updateCurrentPlayerDisplay() {
   const display = document.getElementById("current-player");
   if (display) {
@@ -244,6 +260,9 @@ function showWinMessage(winner) {
       winMessage.textContent = "It's a Draw!";
   } else {
       winMessage.textContent = `${winner} wins!`;
+      // Determine confetti color based on winner
+      const confettiColor = winner === "Black" ? "#ffd700" : "#4ecdc4";
+      confetti(confettiColor);
   }
   winModal.classList.remove('hidden');
 }
