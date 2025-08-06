@@ -3,7 +3,7 @@
 ## 🎯 Current Status: **PRODUCTION READY** ✅
 
 **Last Updated**: January 2025  
-**Version**: v1.5.0 (Phase 1 Complete)  
+**Version**: v1.5.1 (Bugfix: Haji promotion logic)  
 **Status**: All critical bugs resolved, Phase 1 features implemented
 
 ---

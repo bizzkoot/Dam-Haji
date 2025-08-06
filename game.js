@@ -349,6 +349,8 @@ function canCaptureAgain(row, col) {
     if (!piece) return false;
 
     const moves = getAvailableCaptureMoves(row, col);
+    
+
 
     // Extra safety: for each candidate capture, validate the intermediate jumped square
     // is occupied by an opponent NOW (prevents stale/chained jumps over an already removed piece).
@@ -383,6 +385,8 @@ function canCaptureAgain(row, col) {
             return !!(jumped && jumped.classList.contains(enemyClass));
         }
     });
+
+
 
     return filtered.length > 0;
 }

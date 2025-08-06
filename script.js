@@ -914,16 +914,18 @@ function executeMove(move) {
     });
     
     // Check if the piece can make additional moves
-    const canMakeAdditionalMoves = (isCapture && canCaptureAgain(endRow, endCol)) || 
-                                  (isHajiPromotion && hasAvailableMovesForPiece(endRow, endCol));
+    // Allow additional moves for:
+    // 1. Multiple captures (capture followed by more captures)
+    // 2. Haji promotion through capture that can continue capturing
+    // 3. Existing Haji making captures that can continue
+    const canMakeAdditionalMoves = (isCapture && canCaptureAgain(endRow, endCol));
+    
+
     
     if (canMakeAdditionalMoves) {
         if (detailedDebugLoggingEnabled) {
             if (isCapture && canCaptureAgain(endRow, endCol)) {
                 console.log(`[DEBUG] Multiple capture possible. Remaining piece at (${endRow}, ${endCol})`);
-            }
-            if (isHajiPromotion && hasAvailableMovesForPiece(endRow, endCol)) {
-                console.log(`[DEBUG] Newly promoted Haji can make additional moves at (${endRow}, ${endCol})`);
             }
         }
         selectedPiece = endCell.firstChild;
