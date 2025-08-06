@@ -4,6 +4,16 @@
 
 // --- AI CONFIGURATION ---
 
+const AI_TIME_LIMITS = {
+    easy: 2000,    // 2 seconds
+    medium: 5000,  // 5 seconds
+    hard: 10000    // 10 seconds
+};
+
+function getTimeLimit(aiDifficulty) {
+    return AI_TIME_LIMITS[aiDifficulty] || 5000;
+}
+
 const AI_WEIGHTS = {
     easy: {
         captureValue: 10,
@@ -292,71 +302,293 @@ function evaluateBoardState(board, player, aiDifficulty) {
     return score;
 }
 
+function scoreMove(board, move, player, aiDifficulty) {
+    const weights = AI_WEIGHTS[aiDifficulty];
+    let score = 0;
+    
+    // Capture moves get highest priority
+    if (move.isCapture) {
+        score += 1000;
+        
+        // Multiple captures get bonus
+        const nextBoard = pureApplyMove(board, move);
+        const nextCaptures = pureGetAllCaptureMoves(nextBoard, player);
+        score += nextCaptures.length * 100;
+    }
+    
+    // Haji moves get priority
+    const piece = board[move.startRow][move.startCol];
+    if (piece && piece.haji) {
+        score += 100;
+    }
+    
+    // Center control
+    const centerDistance = Math.abs(move.endCol - 3.5) + Math.abs(move.endRow - 3.5);
+    score += (7 - centerDistance) * 10;
+    
+    // Promotion moves
+    if ((move.endRow === 0 && player === 'W') || (move.endRow === 7 && player === 'B')) {
+        score += 200;
+    }
+    
+    // Position value
+    const positionValue = player === 'B' ? move.endRow / 7 : (7 - move.endRow) / 7;
+    score += positionValue * 50;
+    
+    return score;
+}
+
+function orderMoves(board, moves, player, aiDifficulty) {
+    return moves.map(move => ({
+        ...move,
+        score: scoreMove(board, move, player, aiDifficulty)
+    })).sort((a, b) => b.score - a.score);
+}
+
+function isEndgame(board, player) {
+    let playerPieces = 0;
+    let opponentPieces = 0;
+    let playerHaji = 0;
+    let opponentHaji = 0;
+    
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = board[r][c];
+            if (!cell) continue;
+            
+            if (cell.color === player) {
+                playerPieces++;
+                if (cell.haji) playerHaji++;
+            } else {
+                opponentPieces++;
+                if (cell.haji) opponentHaji++;
+            }
+        }
+    }
+    
+    // Endgame conditions
+    if (playerPieces + opponentPieces <= 6) return true;
+    if (playerHaji + opponentHaji >= 3) return true;
+    if (playerPieces <= 2 || opponentPieces <= 2) return true;
+    
+    return false;
+}
+
+function isKingVsKing(board, player) {
+    let playerHaji = 0;
+    let opponentHaji = 0;
+    let playerRegular = 0;
+    let opponentRegular = 0;
+    
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = board[r][c];
+            if (!cell) continue;
+            
+            if (cell.color === player) {
+                if (cell.haji) playerHaji++;
+                else playerRegular++;
+            } else {
+                if (cell.haji) opponentHaji++;
+                else opponentRegular++;
+            }
+        }
+    }
+    
+    return playerRegular === 0 && opponentRegular === 0 && playerHaji > 0 && opponentHaji > 0;
+}
+
+function evaluateEndgame(board, player, aiDifficulty) {
+    const weights = AI_WEIGHTS[aiDifficulty];
+    let score = 0;
+    
+    if (isKingVsKing(board, player)) {
+        score = evaluateKingVsKing(board, player, aiDifficulty);
+    } else {
+        score = evaluateBoardState(board, player, aiDifficulty);
+    }
+    
+    return score;
+}
+
+function evaluateKingVsKing(board, player, aiDifficulty) {
+    let playerHaji = 0;
+    let opponentHaji = 0;
+    let playerCenterControl = 0;
+    let opponentCenterControl = 0;
+    
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = board[r][c];
+            if (!cell) continue;
+            
+            const centerDistance = Math.abs(c - 3.5) + Math.abs(r - 3.5);
+            const centerValue = (7 - centerDistance) / 7;
+            
+            if (cell.color === player) {
+                playerHaji++;
+                playerCenterControl += centerValue;
+            } else {
+                opponentHaji++;
+                opponentCenterControl += centerValue;
+            }
+        }
+    }
+    
+    // King vs King evaluation
+    let score = (playerHaji - opponentHaji) * 1000; // Haji count is crucial
+    score += (playerCenterControl - opponentCenterControl) * 100; // Center control matters
+    score += (playerHaji - opponentHaji) * 50; // Extra weight for Haji advantage
+    
+    return score;
+}
+
 function minimax(board, depth, isMaximizingPlayer, alpha, beta, player, aiPlayer, aiDifficulty) {
     if (depth === 0) {
+        if (isEndgame(board, player)) {
+            return evaluateEndgame(board, player, aiDifficulty);
+        }
         return evaluateBoardState(board, player, aiDifficulty);
     }
-
-    // NEW: Implement forced capture logic in minimax as well
+    
     const mustCapture = pureCheckAvailableCaptures(board, player);
     const captureMoves = pureGetAllCaptureMoves(board, player);
     const regularMoves = pureGetAllRegularMoves(board, player);
-    
-    // If forced captures exist, only consider capture moves
-    // If no forced captures, consider regular moves
     const moves = mustCapture ? captureMoves : (captureMoves.length > 0 ? captureMoves : regularMoves);
 
     if (moves.length === 0) {
         return isMaximizingPlayer ? -Infinity : Infinity;
     }
 
+    // Order moves for better pruning
+    const orderedMoves = orderMoves(board, moves, player, aiDifficulty);
+
     if (isMaximizingPlayer) {
         let maxEval = -Infinity;
-        for (const move of moves) {
+        for (const move of orderedMoves) {
             const nextBoard = pureApplyMove(board, move);
             const evaluation = minimax(nextBoard, depth - 1, false, alpha, beta, player === "B" ? "W" : "B", aiPlayer, aiDifficulty);
             maxEval = Math.max(maxEval, evaluation);
             alpha = Math.max(alpha, evaluation);
-            if (beta <= alpha) break;
+            if (beta <= alpha) {
+                console.log(`[AI DEBUG] Alpha-beta cutoff at depth ${depth}`);
+                break;
+            }
         }
         return maxEval;
     } else {
         let minEval = Infinity;
-        for (const move of moves) {
+        for (const move of orderedMoves) {
             const nextBoard = pureApplyMove(board, move);
             const evaluation = minimax(nextBoard, depth - 1, true, alpha, beta, player === "B" ? "W" : "B", aiPlayer, aiDifficulty);
             minEval = Math.min(minEval, evaluation);
             beta = Math.min(beta, evaluation);
-            if (beta <= alpha) break;
+            if (beta <= alpha) {
+                console.log(`[AI DEBUG] Alpha-beta cutoff at depth ${depth}`);
+                break;
+            }
         }
         return minEval;
     }
 }
 
-function findBestMove(board, player, aiDifficulty, aiPlayer) {
-    const depth = { easy: 1, medium: 3, hard: 5 }[aiDifficulty];
+function detectGamePhase(board, player) {
+    let playerPieces = 0;
+    let opponentPieces = 0;
+    let playerHaji = 0;
+    let opponentHaji = 0;
+    
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = board[r][c];
+            if (!cell) continue;
+            
+            if (cell.color === player) {
+                playerPieces++;
+                if (cell.haji) playerHaji++;
+            } else {
+                opponentPieces++;
+                if (cell.haji) opponentHaji++;
+            }
+        }
+    }
+    
+    const totalPieces = playerPieces + opponentPieces;
+    
+    if (totalPieces <= 6) return 'endgame';
+    if (totalPieces <= 12) return 'midgame';
+    return 'opening';
+}
+
+function getDynamicDepth(aiDifficulty, gamePhase, board, player) {
+    const baseDepths = {
+        easy: { opening: 2, midgame: 3, endgame: 4 },
+        medium: { opening: 4, midgame: 5, endgame: 6 },
+        hard: { opening: 6, midgame: 7, endgame: 8 }
+    };
+    
+    let depth = baseDepths[aiDifficulty][gamePhase];
+    
+    // Adjust depth based on game state
+    const mustCapture = pureCheckAvailableCaptures(board, player);
+    if (mustCapture) {
+        depth += 1; // Search deeper when captures are available
+    }
+    
+    // Reduce depth in complex positions
+    const totalMoves = pureGetAllCaptureMoves(board, player).length + pureGetAllRegularMoves(board, player).length;
+    if (totalMoves > 20) {
+        depth = Math.max(depth - 1, 1);
+    }
+    
+    return depth;
+}
+
+function iterativeDeepening(board, player, aiDifficulty, aiPlayer, maxTime = 5000) {
+    const startTime = Date.now();
     let bestMove = null;
     let bestValue = -Infinity;
+    let currentDepth = 1;
     
-    // NEW: Implement forced capture logic like the player
+    const gamePhase = detectGamePhase(board, player);
+    const maxDepth = getDynamicDepth(aiDifficulty, gamePhase, board, player);
+    
+    console.log(`[AI DEBUG] Game phase: ${gamePhase}, Max depth: ${maxDepth}`);
+    
+    while (currentDepth <= maxDepth && (Date.now() - startTime) < maxTime) {
+        console.log(`[AI DEBUG] Searching at depth ${currentDepth}`);
+        
+        const result = searchAtDepth(board, player, currentDepth, aiPlayer, aiDifficulty);
+        
+        if (result.move) {
+            bestMove = result.move;
+            bestValue = result.value;
+            console.log(`[AI DEBUG] Depth ${currentDepth} completed. Best move: (${bestMove.startRow},${bestMove.startCol})->(${bestMove.endRow},${bestMove.endCol}) with value: ${bestValue}`);
+        } else {
+            console.log(`[AI DEBUG] No move found at depth ${currentDepth}`);
+            break;
+        }
+        
+        currentDepth++;
+    }
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`[AI DEBUG] Iterative deepening completed in ${totalTime}ms. Final depth: ${currentDepth - 1}`);
+    
+    return bestMove;
+}
+
+function searchAtDepth(board, player, depth, aiPlayer, aiDifficulty) {
     const mustCapture = pureCheckAvailableCaptures(board, player);
     const captureMoves = pureGetAllCaptureMoves(board, player);
     const regularMoves = pureGetAllRegularMoves(board, player);
-    
-    // If forced captures exist, only consider capture moves
-    // If no forced captures, consider regular moves
     const moves = mustCapture ? captureMoves : (captureMoves.length > 0 ? captureMoves : regularMoves);
-
-    // --- AI DIAGNOSTIC LOGGING ---
-    console.log(`[AI DEBUG] Board state at start of AI turn for player ${player}:`);
-    console.table(board.map(row => row.map(p => p ? `${p.color}${p.haji ? 'H' : ''}` : '.')));
-    console.log(`[AI DEBUG] Turn: ${player}`);
-    console.log(`[AI DEBUG] Forced Capture Active: ${mustCapture}`);
-    console.log(`[AI DEBUG] Found ${captureMoves.length} capture moves:`, captureMoves.map(m => `(${m.startRow},${m.startCol})->(${m.endRow},${m.endCol})`));
-    console.log(`[AI DEBUG] Found ${regularMoves.length} regular moves:`, regularMoves.map(m => `(${m.startRow},${m.startCol})->(${m.endRow},${m.endCol})`));
-    console.log(`[AI DEBUG] Moves being considered by AI:`, moves.map(m => `(${m.startRow},${m.startCol})->(${m.endRow},${m.endCol})`));
-    // --- END AI DIAGNOSTIC LOGGING ---
-
+    
+    if (moves.length === 0) return { move: null, value: -Infinity };
+    
+    let bestMove = null;
+    let bestValue = -Infinity;
+    
     for (const move of moves) {
         const nextBoard = pureApplyMove(board, move);
         const val = minimax(nextBoard, depth - 1, false, -Infinity, Infinity, player === "B" ? "W" : "B", aiPlayer, aiDifficulty);
@@ -365,18 +597,11 @@ function findBestMove(board, player, aiDifficulty, aiPlayer) {
             bestMove = move;
         }
     }
-
-    // --- AI DIAGNOSTIC LOGGING ---
-    if (bestMove) {
-        console.log(`[AI DEBUG] Best move found: (${bestMove.startRow},${bestMove.startCol})->(${bestMove.endRow},${bestMove.endCol}) with value: ${bestValue}`);
-    } else if (moves.length > 0) {
-        // If no best move found but moves available, pick random move
-        bestMove = moves[Math.floor(Math.random() * moves.length)];
-        console.log(`[AI DEBUG] No best move found, selecting random move: (${bestMove.startRow},${bestMove.startCol})->(${bestMove.endRow},${bestMove.endCol})`);
-    } else {
-        console.log(`[AI DEBUG] No best move found.`);
-    }
-    // --- END AI DIAGNOSTIC LOGGING ---
     
-    return bestMove;
+    return { move: bestMove, value: bestValue };
+}
+
+function findBestMove(board, player, aiDifficulty, aiPlayer) {
+    // Use iterative deepening instead of fixed depth
+    return iterativeDeepening(board, player, aiDifficulty, aiPlayer);
 }

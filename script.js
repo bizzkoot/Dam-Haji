@@ -775,14 +775,20 @@ function updateScore() {
   document.getElementById('white-score').textContent = `White: ${whiteScore}`;
 }
 
-function updateAIDisplay() {
+function updateAIDisplay(isThinking = false) {
     const aiStatus = document.getElementById('ai-status');
     const aiDifficultyDisplay = document.getElementById('ai-difficulty');
     const aiToggleBtn = document.getElementById('ai-toggle');
 
     if (aiStatus) {
-        aiStatus.textContent = aiEnabled ? "AI: ON" : "AI: OFF";
-        aiStatus.classList.toggle('ai-on', aiEnabled);
+        if (isThinking) {
+            aiStatus.textContent = "AI: Thinking...";
+            aiStatus.classList.add('ai-thinking');
+        } else {
+            aiStatus.textContent = aiEnabled ? "AI: ON" : "AI: OFF";
+            aiStatus.classList.remove('ai-thinking');
+        }
+        aiStatus.classList.toggle('ai-on', aiEnabled && !isThinking);
         aiStatus.classList.toggle('ai-off', !aiEnabled);
     }
     if (aiDifficultyDisplay) aiDifficultyDisplay.textContent = `Difficulty: ${aiDifficulty.toUpperCase()}`;
@@ -993,13 +999,12 @@ function handleClick(event) {
 
 function makeAIMove() {
     if (!aiEnabled || currentPlayer !== aiPlayer) return;
-    const aiStatus = document.getElementById('ai-status');
-    if (aiStatus) aiStatus.textContent = "AI: Thinking...";
+    updateAIDisplay(true); // Show AI is thinking
 
     setTimeout(() => {
         const board = buildBoardFromDOM();
         const bestMove = findBestMove(board, aiPlayer, aiDifficulty, aiPlayer);
-        if (aiStatus) aiStatus.textContent = aiEnabled ? "AI: ON" : "AI: OFF";
+        updateAIDisplay(false); // Reset AI status
 
         if (bestMove) {
             const piece = getPiece(bestMove.startRow, bestMove.startCol);
@@ -1250,6 +1255,49 @@ function testWinAnimationDirect(winner = 'Black') {
     showWinMessage(winner);
 }
 
+// Test iterative deepening with time limits
+function testIterativeDeepening() {
+    const testBoard = buildBoardFromDOM();
+    const startTime = Date.now();
+    const move = iterativeDeepening(testBoard, 'B', 'medium', 'B', 2000);
+    const endTime = Date.now();
+    
+    console.assert(endTime - startTime <= 2500, 'Time limit exceeded');
+    console.assert(move !== null, 'No move returned');
+}
+
+// Test move ordering efficiency
+function testMoveOrdering() {
+    const testBoard = buildBoardFromDOM();
+    const moves = pureGetAllCaptureMoves(testBoard, 'B').concat(pureGetAllRegularMoves(testBoard, 'B'));
+    const orderedMoves = orderMoves(testBoard, moves, 'B', 'medium');
+    
+    // Verify captures are prioritized
+    const captures = orderedMoves.filter(m => m.isCapture);
+    const regular = orderedMoves.filter(m => !m.isCapture);
+    
+    console.assert(captures.length === 0 || regular.length === 0 || captures[0].score > regular[0].score, 'Captures not prioritized');
+}
+
+// Test endgame detection
+function testEndgameRecognition() {
+    const endgameBoard = [
+        [{color: 'B', haji: true}, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null],
+        [null, null, {color: 'W', haji: true}, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null]
+    ];
+    const isEndgameResult = isEndgame(endgameBoard, 'B');
+    const isKingVsKingResult = isKingVsKing(endgameBoard, 'B');
+    
+    console.assert(isEndgameResult === true, 'Endgame not detected');
+    console.assert(isKingVsKingResult === true, 'King vs King not detected');
+}
+
 
 
 // Add debug button to HTML
@@ -1291,6 +1339,13 @@ function addDebugButton() {
         document.getElementById('debug-modal').classList.add('hidden');
         setupAndPlayScenario(captureScenario);
     });
+    const runAITestsBtn = createDebugButton('debug-run-ai-tests', 'Run AI Tests', () => {
+        document.getElementById('debug-modal').classList.add('hidden');
+        testIterativeDeepening();
+        testMoveOrdering();
+        testEndgameRecognition();
+        showNotification('AI tests run. Check console for results.', 'info');
+    });
 
     // Append buttons to container
     debugButtonsContainer.appendChild(endGameTestBtn);
@@ -1299,6 +1354,7 @@ function addDebugButton() {
     debugButtonsContainer.appendChild(blackWinBtn);
     debugButtonsContainer.appendChild(whiteWinBtn);
     debugButtonsContainer.appendChild(playScenarioBtn);
+    debugButtonsContainer.appendChild(runAITestsBtn);
   }
 }
 

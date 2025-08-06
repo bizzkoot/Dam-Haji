@@ -1,68 +1,39 @@
-MOVE: Player B moves from [3,2] to [5,0] (Capture: true) script.js:840:13
-[DEBUG] Current Player: B script.js:843:17
-[DEBUG] Piece moved: Black Regular script.js:844:17
-[DEBUG] Start Position: (3, 2) script.js:845:17
-[DEBUG] End Position: (5, 0) script.js:846:17
-[DEBUG] Is Capture: true script.js:847:17
-[DEBUG] Moves since last capture reset to 0. script.js:856:50
-[DEBUG] Captured piece at (4, 1) script.js:875:54
-[DEBUG] Checking additional moves for piece at (5, 0) script.js:924:17
-[DEBUG] isCapture: true, canCaptureAgain: true script.js:925:17
-[DEBUG] canMakeAdditionalMoves: true script.js:926:17
-[DEBUG] Multiple capture possible. Remaining piece at (5, 0) script.js:932:25
-[DEBUG] Current movesSinceCapture: 0/50 script.js:956:46
-MOVE: Player B moves from [5,0] to [7,2] (Capture: true) script.js:840:13
-[DEBUG] Current Player: B script.js:843:17
-[DEBUG] Piece moved: Black Regular script.js:844:17
-[DEBUG] Start Position: (5, 0) script.js:845:17
-[DEBUG] End Position: (7, 2) script.js:846:17
-[DEBUG] Is Capture: true script.js:847:17
-[DEBUG] Moves since last capture reset to 0. script.js:856:50
-[DEBUG] Captured piece at (6, 1) script.js:875:54
-[DEBUG] Piece promoted to Haji at (7, 2) script.js:896:54
-[DEBUG] canCaptureAgain: Checking Haji at (7, 2) game.js:355:17
-[DEBUG] canCaptureAgain: Found 0 potential capture moves game.js:356:17
-[DEBUG] canCaptureAgain: Filtered to 0 valid capture moves game.js:397:17
-[DEBUG] Checking additional moves for piece at (7, 2) script.js:924:17
-[DEBUG] canCaptureAgain: Checking Haji at (7, 2) game.js:355:17
-[DEBUG] canCaptureAgain: Found 0 potential capture moves game.js:356:17
-[DEBUG] canCaptureAgain: Filtered to 0 valid capture moves game.js:397:17
-[DEBUG] isCapture: true, canCaptureAgain: false script.js:925:17
-[DEBUG] canMakeAdditionalMoves: false script.js:926:17
-[DEBUG] Turn switched to W. script.js:948:50
-[DEBUG] Current movesSinceCapture: 0/50 script.js:956:46
-[AI DEBUG] Board state at start of AI turn for player W: ai.js:351:13
-console.table() ai.js:352:13
-(index)	0	1	2	3	4	5	6	7
-0	.	B	.	B	.	B	.	B
-1	.	.	.	.	B	.	.	.
-2	.	.	.	.	.	B	.	.
-3	.	.	.	.	B	.	B	.
-4	.	.	.	.	.	.	.	.
-5	.	.	W	.	.	.	W	.
-6	.	.	.	.	.	.	.	W
-7	W	.	BH	.	W	.	W	.
-[AI DEBUG] Turn: W ai.js:353:13
-[AI DEBUG] Forced Capture Active: false ai.js:354:13
-[AI DEBUG] Found 0 capture moves: 
-Array []
-ai.js:355:13
-[AI DEBUG] Found 8 regular moves: 
-Array(8) [ "(5,2)->(4,1)", "(5,2)->(4,3)", "(5,6)->(4,5)", "(5,6)->(4,7)", "(7,0)->(6,1)", "(7,4)->(6,3)", "(7,4)->(6,5)", "(7,6)->(6,5)" ]
-ai.js:356:13
-[AI DEBUG] Moves being considered by AI: 
-Array(8) [ "(5,2)->(4,1)", "(5,2)->(4,3)", "(5,6)->(4,5)", "(5,6)->(4,7)", "(7,0)->(6,1)", "(7,4)->(6,3)", "(7,4)->(6,5)", "(7,6)->(6,5)" ]
-ai.js:357:13
-[AI DEBUG] Best move found: (5,2)->(4,3) with value: 119.2 ai.js:371:17
-MOVE: Player W moves from [5,2] to [4,3] (Capture: false) script.js:840:13
-[DEBUG] Current Player: W script.js:843:17
-[DEBUG] Piece moved: White Regular script.js:844:17
-[DEBUG] Start Position: (5, 2) script.js:845:17
-[DEBUG] End Position: (4, 3) script.js:846:17
-[DEBUG] Is Capture: false script.js:847:17
-[DEBUG] Moves since last capture incremented to 1. script.js:890:50
-[DEBUG] Checking additional moves for piece at (4, 3) script.js:924:17
-[DEBUG] isCapture: false, canCaptureAgain: false script.js:925:17
-[DEBUG] canMakeAdditionalMoves: false script.js:926:17
-[DEBUG] Turn switched to B. script.js:948:50
-[DEBUG] Current movesSinceCapture: 1/50 script.js:956:46
+[AI DEBUG] Game phase: opening, Max depth: 4 ai.js:556:13
+[AI DEBUG] Searching at depth 1 ai.js:559:17
+[AI DEBUG] Depth 1 completed. Best move: (2,5)->(3,6) with value: -0.028571428571428248 ai.js:566:21
+[AI DEBUG] Searching at depth 2 ai.js:559:17
+[AI DEBUG] Depth 2 completed. Best move: (2,1)->(3,2) with value: 1.5543122344752192e-15 ai.js:566:21
+[AI DEBUG] Searching at depth 3 ai.js:559:17
+[AI DEBUG] Alpha-beta cutoff at depth 1 33 ai.js:474:25
+[AI DEBUG] Depth 3 completed. Best move: (2,3)->(3,4) with value: -16.685714285714287 ai.js:566:21
+[AI DEBUG] Searching at depth 4 ai.js:559:17
+[AI DEBUG] Alpha-beta cutoff at depth 1 9 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 8 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 4 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 5 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 6 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 6 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 2 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 7 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 4 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 2 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 7 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 ai.js:474:25
+[AI DEBUG] Alpha-beta cutoff at depth 1 2 ai.js:487:25
+[AI DEBUG] Alpha-beta cutoff at depth 2 4 ai.js:474:25
+[AI DEBUG] Depth 4 completed. Best move: (2,7)->(3,6) with value: -0.05714285714285716 ai.js:566:21
+[AI DEBUG] Iterative deepening completed in 19ms. Final depth: 4 ai.js:576:13
