@@ -8,6 +8,9 @@
 let moveHistory = [];
 let currentMoveIndex = -1;
 
+// Make moveHistory accessible globally
+window.moveHistory = moveHistory;
+
 // Game State Management for Undo/Redo
 let gameStates = [];
 let currentStateIndex = -1;

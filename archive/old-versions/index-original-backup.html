@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dam Haji</title>
+  <link rel="stylesheet" href="style.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="favicon.ico">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <h1>Dam Haji</h1>
+  <div id="game-info">
+    <div id="current-player"></div>
+    <div id="score">
+      <span id="black-score">Black: 0</span>
+      <span id="white-score">White: 0</span>
+    </div>
+    <div id="ai-controls">
+      <button id="ai-toggle">AI: OFF</button>
+      <div id="ai-difficulty-controls">
+        <button id="ai-easy">Easy</button>
+        <button id="ai-medium">Medium</button>
+        <button id="ai-hard">Hard</button>
+      </div>
+      <div id="ai-status">AI: OFF</div>
+      <div id="ai-difficulty">Difficulty: MEDIUM</div>
+    </div>
+    <div id="phase1-controls">
+      <button id="show-move-history-btn">📋 Move History</button>
+    </div>
+  </div>
+  
+  <!-- Undo/Redo Controls -->
+  <div id="undo-redo-controls">
+    <button id="undo-btn" title="Undo last move (Ctrl+Z)">
+      <span>↶</span> Undo
+    </button>
+    <button id="redo-btn" title="Redo move (Ctrl+Y)">
+      <span>↷</span> Redo
+    </button>
+  </div>
+  
+  <div id="game-board"></div>
+  <button id="reset-game-btn">Reset Game</button>
+  
+  <!-- Save/Load Controls -->
+  <div id="save-load-controls">
+    <button id="save-game-btn">Save Game</button>
+    <button id="load-game-btn">Load Game</button>
+  </div>
+  
+  <div id="win-modal" class="hidden">
+    <div id="win-message"></div>
+    <button id="play-again">Play Again</button>
+  </div>
+
+  <!-- Debug Button and Modal -->
+  <button id="debug-main-btn">⚙️</button>
+  <div id="debug-modal" class="hidden">
+      <div id="debug-modal-content">
+          <h2>Debug Actions</h2>
+          <div id="debug-buttons-container">
+              <!-- Debug buttons will be injected here -->
+          </div>
+          <button id="close-debug-modal">Close</button>
+      </div>
+  </div>
+
+  <!-- Move History Panel -->
+  <div id="move-history-panel" class="hidden">
+    <div id="move-history-header">
+      <h3>Move History</h3>
+      <button id="toggle-move-history">−</button>
+    </div>
+    <div id="move-history-content">
+      <div id="move-list"></div>
+    </div>
+  </div>
+
+  <!-- Save/Load Modal -->
+  <div id="save-load-modal" class="hidden">
+    <div id="save-load-content">
+      <div id="save-load-header">
+        <h3>Save/Load Game</h3>
+        <button id="close-save-load-modal">×</button>
+      </div>
+      <div id="save-load-tabs">
+        <button class="tab-btn active" data-tab="save">Save Game</button>
+        <button class="tab-btn" data-tab="load">Load Game</button>
+      </div>
+      <div id="save-tab" class="tab-content active">
+        <div id="save-slots"></div>
+      </div>
+      <div id="load-tab" class="tab-content">
+        <div id="load-slots"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+  <script src="ai.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

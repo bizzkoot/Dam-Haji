@@ -34,6 +34,9 @@ function addMoveToHistory(move) {
     moveHistory.push(gameMove);
     currentMoveIndex = moveHistory.length - 1;
     
+    // Make sure moveHistory is accessible on window object for panels
+    window.moveHistory = moveHistory;
+    
     updateMoveHistoryDisplay();
 }
 
@@ -114,6 +117,8 @@ function saveGameState() {
     gameStates.push(newState);
     currentStateIndex = gameStates.length - 1;
     
+    // Game state saved successfully
+    
     // Limit states to prevent memory issues
     if (gameStates.length > MAX_STATES) {
         gameStates.shift();
@@ -124,35 +129,63 @@ function saveGameState() {
 }
 
 function undoMove() {
+    console.log(`[UNDO] Starting undo, currentStateIndex: ${currentStateIndex}, total states: ${gameStates.length}`);
+    
     if (currentStateIndex > 0) {
+        // Undo one move
         currentStateIndex--;
+        console.log(`[UNDO] About to restore state ${currentStateIndex}`);
+        
         restoreGameState(currentStateIndex);
+        console.log(`[UNDO] State restored, updating UI`);
+        
         updateCurrentPlayerDisplay();
         updateScore();
         updateMoveHistoryDisplay();
         updateUndoRedoButtons();
+        
+        // Update Move History panel if it's open
+        if (window.menuSystem) {
+            window.menuSystem.updateMoveHistory();
+        }
+        
         showNotification('Move undone', 'info');
         
         // Clear any ongoing selections
         clearHighlights();
         selectedPiece = null;
+        
+        console.log(`[UNDO] Undo completed successfully`);
+        return true; // Success
     }
+    
+    console.log(`[UNDO] No moves to undo`);
+    return false; // No more moves to undo
 }
 
 function redoMove() {
     if (currentStateIndex < gameStates.length - 1) {
+        // Redo debug logs disabled for performance
         currentStateIndex++;
         restoreGameState(currentStateIndex);
         updateCurrentPlayerDisplay();
         updateScore();
         updateMoveHistoryDisplay();
         updateUndoRedoButtons();
+        
+        // Update Move History panel if it's open
+        if (window.menuSystem) {
+            window.menuSystem.updateMoveHistory();
+        }
+        
         showNotification('Move redone', 'info');
         
         // Clear any ongoing selections
         clearHighlights();
         selectedPiece = null;
+        return true; // Success
     }
+    return false; // No more moves to redo
 }
 
 function restoreGameState(stateIndex) {
@@ -206,11 +239,64 @@ function restoreGameState(stateIndex) {
     moveHistory = [...state.moveHistory];
     currentMoveIndex = moveHistory.length - 1;
     
+    // Update window.moveHistory for panels
+    window.moveHistory = moveHistory;
+    
     // Update UI to reflect restored state
     updateScore();
     
+    // IMPORTANT: Update Recent Moves section to match restored state
+    updateRecentMovesAfterUndoRedo();
+    
     // Clear any ongoing drag operations
     cleanupDragState();
+}
+
+function updateRecentMovesAfterUndoRedo() {
+    // Clear and rebuild Recent Moves section to match current moveHistory state
+    if (window.gameIntegration && window.gameIntegration.modernUI) {
+        const modernUI = window.gameIntegration.modernUI;
+        
+        // Clear existing recent moves
+        modernUI.clearRecentMoves();
+        
+        // Re-add moves from current moveHistory (last 5 moves)
+        const startIndex = Math.max(0, moveHistory.length - 5);
+        // Add moves in chronological order since addRecentMove adds each new one to the top
+        // This will result in newest moves at top, oldest at bottom (correct order)
+        for (let i = startIndex; i < moveHistory.length; i++) {
+            const move = moveHistory[i];
+            const moveDescription = formatMoveForRecentMoves(move);
+            modernUI.addRecentMove(i + 1, moveDescription);
+        }
+        
+        // Update statistics
+        const captures = moveHistory.filter(m => m.isCapture).length;
+        const hajis = document.querySelectorAll('.piece.haji').length;
+        modernUI.updateStats(moveHistory.length, captures, hajis);
+    }
+}
+
+function formatMoveForRecentMoves(move) {
+    // Format move for Recent Moves display
+    if (typeof move.startCol === 'undefined' || typeof move.startRow === 'undefined' ||
+        typeof move.endCol === 'undefined' || typeof move.endRow === 'undefined') {
+        return 'unknown move';
+    }
+    
+    const startPos = `${String.fromCharCode(97 + move.startCol)}${8 - move.startRow}`;
+    const endPos = `${String.fromCharCode(97 + move.endCol)}${8 - move.endRow}`;
+    let description = `${startPos} → ${endPos}`;
+    
+    if (move.isCapture) {
+        description += ` (×${move.capturedPieces?.length || 1})`;
+    }
+    
+    if (move.isHajiPromotion) {
+        description += ` (Haji!)`;
+    }
+    
+    return description;
 }
 
 function updateUndoRedoButtons() {
@@ -617,11 +703,41 @@ function createLoadSlot(slotNumber) {
     return slot;
 }
 
-function openSaveLoadModal() {
+function openSaveLoadModal(defaultTab = 'save') {
     const modal = document.getElementById('save-load-modal');
     if (modal) {
         modal.classList.remove('hidden');
         updateSaveLoadUI();
+        
+        // Set the active tab based on the parameter
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Clear all active states first
+        tabBtns.forEach(btn => {
+            btn.classList.remove('active');
+            // Reset inline styles that might override CSS
+            btn.style.color = '#666';
+            btn.style.borderBottom = 'none';
+        });
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+            content.style.display = 'none';
+        });
+        
+        // Activate the specified tab
+        const targetTabBtn = document.querySelector(`[data-tab="${defaultTab}"]`);
+        const targetTabContent = document.getElementById(`${defaultTab}-tab`);
+        
+        if (targetTabBtn && targetTabContent) {
+            targetTabBtn.classList.add('active');
+            // Apply inline styles to ensure visibility over existing inline styles
+            targetTabBtn.style.color = '#8B4513';
+            targetTabBtn.style.borderBottom = '3px solid #8B4513';
+            
+            targetTabContent.classList.add('active');
+            targetTabContent.style.display = 'block';
+        }
     }
 }
 
@@ -655,17 +771,17 @@ function initializePhase1Features() {
         toggleMoveHistoryBtn.addEventListener('click', toggleMoveHistory);
     }
     
-    // Initialize undo/redo buttons
-    const undoBtn = document.getElementById('undo-btn');
-    const redoBtn = document.getElementById('redo-btn');
-    
-    if (undoBtn) {
-        undoBtn.addEventListener('click', undoMove);
-    }
-    
-    if (redoBtn) {
-        redoBtn.addEventListener('click', redoMove);
-    }
+    // Undo/redo buttons handled by V2 UI system - original listeners disabled
+    // const undoBtn = document.getElementById('undo-btn');
+    // const redoBtn = document.getElementById('redo-btn');
+    // 
+    // if (undoBtn) {
+    //     undoBtn.addEventListener('click', undoMove);
+    // }
+    // 
+    // if (redoBtn) {
+    //     redoBtn.addEventListener('click', redoMove);
+    // }
     
     // Initialize save/load buttons
     const saveGameBtn = document.getElementById('save-game-btn');
@@ -709,14 +825,24 @@ function initializePhase1Features() {
             const targetTab = btn.dataset.tab;
             
             // Update active tab button
-            tabBtns.forEach(b => b.classList.remove('active'));
+            tabBtns.forEach(b => {
+                b.classList.remove('active');
+                // Reset inline styles
+                b.style.color = '#666';
+                b.style.borderBottom = 'none';
+            });
             btn.classList.add('active');
+            // Apply inline styles to ensure visibility
+            btn.style.color = '#8B4513';
+            btn.style.borderBottom = '3px solid #8B4513';
             
             // Update active tab content
             tabContents.forEach(content => {
                 content.classList.remove('active');
+                content.style.display = 'none';
                 if (content.id === `${targetTab}-tab`) {
                     content.classList.add('active');
+                    content.style.display = 'block';
                 }
             });
         });
@@ -843,15 +969,7 @@ function hasAvailableMovesForPiece(row, col) {
 
 function executeMove(move) {
     const { piece, startRow, startCol, endRow, endCol, isCapture } = move;
-    console.log(`MOVE: Player ${currentPlayer} moves from [${startRow},${startCol}] to [${endRow},${endCol}] (Capture: ${isCapture})`);
-    
-    if (detailedDebugLoggingEnabled) {
-        console.log(`[DEBUG] Current Player: ${currentPlayer}`);
-        console.log(`[DEBUG] Piece moved: ${piece.classList.contains('black') ? 'Black' : 'White'} ${piece.classList.contains('haji') ? 'Haji' : 'Regular'}`);
-        console.log(`[DEBUG] Start Position: (${startRow}, ${startCol})`);
-        console.log(`[DEBUG] End Position: (${endRow}, ${endCol})`);
-        console.log(`[DEBUG] Is Capture: ${isCapture}`);
-    }
+    // All debug logging disabled for performance in production
 
     const endCell = document.querySelector(`.board-cell[data-row="${endRow}"][data-col="${endCol}"]`);
     let capturedPieces = [];
@@ -859,7 +977,6 @@ function executeMove(move) {
 
     if (isCapture) {
         movesSinceCapture = 0; // Reset counter on capture
-        if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Moves since last capture reset to 0.`);
         let capturedRow, capturedCol;
         if (piece.classList.contains("haji")) {
             const rowStep = endRow > startRow ? 1 : -1;
@@ -878,7 +995,6 @@ function executeMove(move) {
         }
         const capturedCell = document.querySelector(`.board-cell[data-row="${capturedRow}"][data-col="${capturedCol}"]`);
         if (capturedCell && capturedCell.firstChild) {
-            if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Captured piece at (${capturedRow}, ${capturedCol})`);
             if (currentPlayer === 'B') blackScore++; else whiteScore++;
             updateScore();
             capturedPieces.push(capturedCell.firstChild);
@@ -893,13 +1009,11 @@ function executeMove(move) {
         }
     } else {
         movesSinceCapture++; // Increment counter on regular move
-        if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Moves since last capture incremented to ${movesSinceCapture}.`);
     }
 
     // Check for Haji promotion
     if ((endRow === 0 && piece.classList.contains("white")) || (endRow === 7 && piece.classList.contains("black"))) {
-        if (!piece.classList.contains("haji")) { // Only log if it's a new promotion
-            if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Piece promoted to Haji at (${endRow}, ${endCol})`);
+        if (!piece.classList.contains("haji")) { // Only promote if not already Haji
             isHajiPromotion = true;
         }
         piece.classList.add("haji");
@@ -929,33 +1043,38 @@ function executeMove(move) {
 
     
     if (canMakeAdditionalMoves) {
-        if (detailedDebugLoggingEnabled) {
-            if (isCapture && canCaptureAgain(endRow, endCol)) {
-                console.log(`[DEBUG] Multiple capture possible. Remaining piece at (${endRow}, ${endCol})`);
-            }
-        }
         selectedPiece = endCell.firstChild;
         highlightAvailableMoves(selectedPiece);
-        // Phase 1: Save game state for undo/redo after additional moves are complete
-        saveGameState();
+        // Don't save state here - wait for turn completion
         if (aiEnabled && currentPlayer === aiPlayer) {
+            // Clear any pending AI moves to prevent stacking
+            if (window.aiMoveTimeout) {
+                clearTimeout(window.aiMoveTimeout);
+            }
             // Wait for the captured piece to be removed before making the next AI move
-            setTimeout(makeAIMove, 600);
+            window.aiMoveTimeout = setTimeout(makeAIMove, 600);
         }
     } else {
         selectedPiece = null;
         clearHighlights();
         currentPlayer = currentPlayer === "B" ? "W" : "B";
         updateCurrentPlayerDisplay();
-        if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Turn switched to ${currentPlayer}.`);
         // Phase 1: Save game state for undo/redo after turn is complete
         saveGameState();
         if (!checkWinCondition() && aiEnabled && currentPlayer === aiPlayer) {
+            // Clear any pending AI moves to prevent stacking
+            if (window.aiMoveTimeout) {
+                clearTimeout(window.aiMoveTimeout);
+            }
             // Use a more robust delay that waits for the DOM to be ready
-            requestAnimationFrame(() => setTimeout(makeAIMove, 600));
+            window.aiMoveTimeout = setTimeout(() => {
+                // Double-check conditions before executing
+                if (aiEnabled && currentPlayer === aiPlayer) {
+                    makeAIMove();
+                }
+            }, 600);
         }
     }
-    if (detailedDebugLoggingEnabled) console.log(`[DEBUG] Current movesSinceCapture: ${movesSinceCapture}/${MAX_MOVES_WITHOUT_CAPTURE}`);
 }
 
 function handleClick(event) {
@@ -999,26 +1118,35 @@ function handleClick(event) {
 
 function makeAIMove() {
     if (!aiEnabled || currentPlayer !== aiPlayer) return;
+    
+    // Prevent multiple simultaneous AI moves
+    if (window.aiThinking) {
+        return; // Simplified - no debug logging
+    }
+    
+    window.aiThinking = true;
     updateAIDisplay(true); // Show AI is thinking
 
     setTimeout(() => {
+        // Double-check conditions haven't changed
+        if (!aiEnabled || currentPlayer !== aiPlayer) {
+            window.aiThinking = false;
+            updateAIDisplay(false);
+            return;
+        }
+        
         const board = buildBoardFromDOM();
         const bestMove = findBestMove(board, aiPlayer, aiDifficulty, aiPlayer);
+        
+        window.aiThinking = false;
         updateAIDisplay(false); // Reset AI status
 
         if (bestMove) {
             const piece = getPiece(bestMove.startRow, bestMove.startCol);
             executeMove({ ...bestMove, piece });
         } else {
-            // AI has no moves, which means it loses.
-            console.log(`[DEBUG] AI (${aiPlayer}) has no moves available. Checking win condition...`);
-            const winConditionResult = checkWinCondition();
-            console.log(`[DEBUG] checkWinCondition() returned: ${winConditionResult}`);
-            if (!winConditionResult) {
-                console.log(`[DEBUG] Win condition not detected, manually checking hasAvailableMoves...`);
-                const hasMoves = hasAvailableMoves(currentPlayer);
-                console.log(`[DEBUG] hasAvailableMoves(${currentPlayer}) returned: ${hasMoves}`);
-            }
+            // AI has no moves, check win condition
+            checkWinCondition();
         }
     }, 100);
 }
@@ -1042,6 +1170,9 @@ function resetGame() {
   gameStates = [];
   currentStateIndex = -1;
   
+  // Update window.moveHistory as well
+  window.moveHistory = moveHistory;
+  
   // Phase 1: Save initial game state
   saveGameState();
   updateMoveHistoryDisplay();
@@ -1056,7 +1187,12 @@ function resetGame() {
   winModal.classList.remove('win-animation-black', 'win-animation-white');
   
   if (aiEnabled && currentPlayer === aiPlayer) {
-    setTimeout(makeAIMove, 500);
+    // Clear any pending AI moves and reset flags
+    if (window.aiMoveTimeout) {
+        clearTimeout(window.aiMoveTimeout);
+    }
+    window.aiThinking = false;
+    window.aiMoveTimeout = setTimeout(makeAIMove, 500);
   }
 }
 
@@ -1112,7 +1248,14 @@ window.addEventListener('load', () => {
     document.getElementById('ai-toggle').addEventListener('click', () => {
         aiEnabled = !aiEnabled;
         updateAIDisplay();
-        if (aiEnabled && currentPlayer === aiPlayer) makeAIMove();
+        if (aiEnabled && currentPlayer === aiPlayer) {
+            // Clear any pending AI moves and reset flags
+            if (window.aiMoveTimeout) {
+                clearTimeout(window.aiMoveTimeout);
+            }
+            window.aiThinking = false;
+            window.aiMoveTimeout = setTimeout(makeAIMove, 300);
+        }
     });
 
     // Helper to set active difficulty styles
@@ -1466,3 +1609,9 @@ function setupAndPlayScenario(scenarioConfig) {
 
     executeNextMove();
 }
+
+// Test function to manually trigger win condition
+window.testWinCondition = (winner = "Black") => {
+    console.log('Testing win condition with winner:', winner);
+    showWinMessage(winner);
+};

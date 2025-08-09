@@ -471,7 +471,7 @@ function minimax(board, depth, isMaximizingPlayer, alpha, beta, player, aiPlayer
             maxEval = Math.max(maxEval, evaluation);
             alpha = Math.max(alpha, evaluation);
             if (beta <= alpha) {
-                console.log(`[AI DEBUG] Alpha-beta cutoff at depth ${depth}`);
+                // Alpha-beta cutoff (removed debug log for performance)
                 break;
             }
         }
@@ -484,7 +484,7 @@ function minimax(board, depth, isMaximizingPlayer, alpha, beta, player, aiPlayer
             minEval = Math.min(minEval, evaluation);
             beta = Math.min(beta, evaluation);
             if (beta <= alpha) {
-                console.log(`[AI DEBUG] Alpha-beta cutoff at depth ${depth}`);
+                // Alpha-beta cutoff (removed debug log for performance)
                 break;
             }
         }
@@ -544,40 +544,126 @@ function getDynamicDepth(aiDifficulty, gamePhase, board, player) {
     return depth;
 }
 
-function iterativeDeepening(board, player, aiDifficulty, aiPlayer, maxTime = 5000) {
+function iterativeDeepeningSync(board, player, aiDifficulty, aiPlayer, maxTime = 5000) {
     const startTime = Date.now();
     let bestMove = null;
     let bestValue = -Infinity;
     let currentDepth = 1;
     
     const gamePhase = detectGamePhase(board, player);
-    const maxDepth = getDynamicDepth(aiDifficulty, gamePhase, board, player);
+    let maxDepth = getDynamicDepth(aiDifficulty, gamePhase, board, player);
     
-    console.log(`[AI DEBUG] Game phase: ${gamePhase}, Max depth: ${maxDepth}`);
+    // Restore original live settings - no artificial depth limiting
+    // The original AI worked perfectly with full depth
+    
+    // Debug: Game phase and max depth (disabled for performance)
     
     while (currentDepth <= maxDepth && (Date.now() - startTime) < maxTime) {
-        console.log(`[AI DEBUG] Searching at depth ${currentDepth}`);
+        // Debug: Searching at depth (disabled for performance)
         
         const result = searchAtDepth(board, player, currentDepth, aiPlayer, aiDifficulty);
         
         if (result.move) {
             bestMove = result.move;
             bestValue = result.value;
-            console.log(`[AI DEBUG] Depth ${currentDepth} completed. Best move: (${bestMove.startRow},${bestMove.startCol})->(${bestMove.endRow},${bestMove.endCol}) with value: ${bestValue}`);
+            // Debug: Depth completed (disabled for performance)
         } else {
-            console.log(`[AI DEBUG] No move found at depth ${currentDepth}`);
+            // Debug: No move found (disabled for performance)
             break;
         }
         
         currentDepth++;
+        
+        // Check time limit more frequently
+        if (Date.now() - startTime > maxTime) {
+            break;
+        }
     }
     
     const totalTime = Date.now() - startTime;
-    console.log(`[AI DEBUG] Iterative deepening completed in ${totalTime}ms. Final depth: ${currentDepth - 1}`);
+    // Debug: Iterative deepening completed (disabled for performance)
     
     return bestMove;
 }
 
+async function iterativeDeepening(board, player, aiDifficulty, aiPlayer, maxTime = 5000) {
+    const startTime = Date.now();
+    let bestMove = null;
+    let bestValue = -Infinity;
+    let currentDepth = 1;
+    
+    const gamePhase = detectGamePhase(board, player);
+    let maxDepth = getDynamicDepth(aiDifficulty, gamePhase, board, player);
+    
+    // Restore original live settings - no browser-specific limitations
+    // The original code worked fine across all browsers
+    
+    // Debug: Game phase and max depth (disabled for performance)
+    
+    while (currentDepth <= maxDepth && (Date.now() - startTime) < maxTime) {
+        // Debug: Searching at depth (disabled for performance)
+        
+        const result = await searchAtDepthAsync(board, player, currentDepth, aiPlayer, aiDifficulty, startTime, maxTime);
+        
+        if (result.move) {
+            bestMove = result.move;
+            bestValue = result.value;
+            // Debug: Depth completed (disabled for performance)
+        } else {
+            // Debug: No move found (disabled for performance)
+            break;
+        }
+        
+        currentDepth++;
+        
+        // Yield to browser every depth level to prevent freezing
+        if (currentDepth <= maxDepth) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
+    
+    const totalTime = Date.now() - startTime;
+    // Debug: Iterative deepening completed (disabled for performance)
+    
+    return bestMove;
+}
+
+async function searchAtDepthAsync(board, player, depth, aiPlayer, aiDifficulty, startTime, maxTime) {
+    const mustCapture = pureCheckAvailableCaptures(board, player);
+    const captureMoves = pureGetAllCaptureMoves(board, player);
+    const regularMoves = pureGetAllRegularMoves(board, player);
+    const moves = mustCapture ? captureMoves : (captureMoves.length > 0 ? captureMoves : regularMoves);
+    
+    if (moves.length === 0) return { move: null, value: -Infinity };
+    
+    let bestMove = null;
+    let bestValue = -Infinity;
+    let moveCount = 0;
+    
+    for (const move of moves) {
+        // Check time limit
+        if (Date.now() - startTime > maxTime) {
+            break;
+        }
+        
+        const nextBoard = pureApplyMove(board, move);
+        const val = minimax(nextBoard, depth - 1, false, -Infinity, Infinity, player === "B" ? "W" : "B", aiPlayer, aiDifficulty);
+        if (val > bestValue) {
+            bestValue = val;
+            bestMove = move;
+        }
+        
+        moveCount++;
+        // Yield every 5 moves to prevent browser freezing
+        if (moveCount % 5 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    }
+    
+    return { move: bestMove, value: bestValue };
+}
+
+// Sync version for compatibility
 function searchAtDepth(board, player, depth, aiPlayer, aiDifficulty) {
     const mustCapture = pureCheckAvailableCaptures(board, player);
     const captureMoves = pureGetAllCaptureMoves(board, player);
@@ -601,7 +687,64 @@ function searchAtDepth(board, player, depth, aiPlayer, aiDifficulty) {
     return { move: bestMove, value: bestValue };
 }
 
+async function findBestMoveAsync(board, player, aiDifficulty, aiPlayer) {
+    // Use async iterative deepening to prevent browser freezing
+    return await iterativeDeepening(board, player, aiDifficulty, aiPlayer);
+}
+
 function findBestMove(board, player, aiDifficulty, aiPlayer) {
-    // Use iterative deepening instead of fixed depth
-    return iterativeDeepening(board, player, aiDifficulty, aiPlayer);
+    // Use iterative deepening instead of fixed depth (sync version like original)
+    return iterativeDeepeningSync(board, player, aiDifficulty, aiPlayer);
+}
+
+function findBestMoveFirefoxCompat(board, player, aiDifficulty, aiPlayer) {
+    const startTime = Date.now();
+    const maxTime = 1000; // 1 second max for Firefox
+    
+    const mustCapture = pureCheckAvailableCaptures(board, player);
+    const captureMoves = pureGetAllCaptureMoves(board, player);
+    const regularMoves = pureGetAllRegularMoves(board, player);
+    const moves = mustCapture ? captureMoves : (captureMoves.length > 0 ? captureMoves : regularMoves);
+    
+    if (moves.length === 0) return null;
+    
+    // Use very reduced depth for Firefox compatibility
+    const depth = aiDifficulty === 'easy' ? 1 : aiDifficulty === 'medium' ? 2 : 3;
+    
+    let bestMove = moves[0]; // Fallback to first move
+    let bestValue = -Infinity;
+    let moveCount = 0;
+    
+    for (const move of moves) {
+        // Check time limit frequently
+        if (Date.now() - startTime > maxTime) {
+            console.log('Firefox: Time limit reached, returning best move found so far');
+            break;
+        }
+        
+        const nextBoard = pureApplyMove(board, move);
+        
+        // Use simplified evaluation for Firefox
+        let val;
+        if (depth <= 1) {
+            // Direct evaluation without minimax for very fast response
+            val = evaluateBoardState(nextBoard, player, aiDifficulty);
+        } else {
+            val = minimax(nextBoard, depth - 1, false, -Infinity, Infinity, player === "B" ? "W" : "B", aiPlayer, aiDifficulty);
+        }
+        
+        if (val > bestValue) {
+            bestValue = val;
+            bestMove = move;
+        }
+        
+        moveCount++;
+        // Early break if we've evaluated enough moves and have a good move
+        if (moveCount >= 10 && bestValue > -100) {
+            console.log('Firefox: Early break after evaluating', moveCount, 'moves');
+            break;
+        }
+    }
+    
+    return bestMove;
 }

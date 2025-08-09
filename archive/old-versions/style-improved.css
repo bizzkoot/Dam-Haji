@@ -1,0 +1,766 @@
+/* =============================================
+   IMPROVED DAM HAJI UI - FULL SCREEN LAYOUT
+   ============================================= */
+
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Main Layout Container */
+#game-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr 320px;
+  grid-template-areas: "left center right";
+  height: 100vh;
+  gap: 2px;
+  background: #e0e6ed;
+}
+
+/* Panel Base Styles */
+.panel {
+  background: white;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Left Panel */
+#left-panel {
+  grid-area: left;
+  border-right: 1px solid #e0e6ed;
+}
+
+/* Center Panel */
+#center-panel {
+  grid-area: center;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+}
+
+/* Right Panel */
+#right-panel {
+  grid-area: right;
+  border-left: 1px solid #e0e6ed;
+}
+
+/* Panel Headers */
+.panel-header {
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.panel-header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.panel-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Panel Sections */
+.panel-section {
+  padding: 1.25rem;
+  border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.panel-section:last-child {
+  border-bottom: none;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.panel-section h3 {
+  color: #2c3e50;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 1rem;
+}
+
+.panel-section h4 {
+  color: #34495e;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+/* Section Headers with Collapse */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.collapse-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #6c757d;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.collapse-btn:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+/* Game Board Container */
+#game-board-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 2rem;
+}
+
+#game-board {
+  width: min(50vh, 60vw);
+  height: min(50vh, 60vw);
+  max-width: 450px;
+  max-height: 450px;
+  min-width: 300px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  border: 3px solid #8B4513;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+/* Board Styles (Keep existing game logic styles) */
+.board-row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: calc(100% / 8);
+}
+
+.board-cell {
+  width: calc(100% / 8);
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.light {
+  background-color: #f0d9b6;
+}
+
+.dark {
+  background-color: #8b4513;
+}
+
+.piece {
+  width: 75%;
+  height: 75%;
+  border-radius: 50%;
+  border: 2px solid #333;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.piece.black {
+  background: radial-gradient(circle, #2c3e50, #1a252f);
+  border-color: #000;
+}
+
+.piece.white {
+  background: radial-gradient(circle, #ecf0f1, #bdc3c7);
+  border-color: #7f8c8d;
+}
+
+.piece.haji {
+  box-shadow: 0 0 0 3px #ffd700, 0 0 10px rgba(255,215,0,0.6);
+  border: 3px solid #ffd700;
+}
+
+.piece.haji::after {
+  content: '★';
+  color: #ffd700;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.2em;
+  font-weight: bold;
+  text-shadow: 0 0 4px rgba(255, 215, 0, 0.8);
+}
+
+/* Current Player Display */
+#current-player {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  padding: 0.75rem;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Score Display */
+#score {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.score-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #8B4513;
+}
+
+.score-label {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.score-value {
+  font-weight: 700;
+  color: #8B4513;
+  font-size: 1.1rem;
+}
+
+/* AI Controls */
+#ai-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+#ai-toggle {
+  padding: 0.75rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#ai-toggle.ai-on {
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: white;
+}
+
+#ai-toggle.ai-off {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+#ai-difficulty-controls {
+  display: flex;
+  gap: 0.25rem;
+}
+
+#ai-difficulty-controls button {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #bdc3c7;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+#ai-difficulty-controls button:hover {
+  background: #f8f9fa;
+}
+
+#ai-difficulty-controls button.active {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  color: white;
+  border-color: #e67e22;
+}
+
+#ai-status {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem;
+}
+
+#ai-status.ai-on {
+  color: #27ae60;
+}
+
+#ai-status.ai-off {
+  color: #e74c3c;
+}
+
+/* Control Groups */
+.control-group {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.control-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Buttons */
+button {
+  border: none;
+  border-radius: 6px;
+  padding: 0.875rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  font-size: 0.9rem;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.control-group button {
+  flex: 1;
+}
+
+.danger-btn {
+  background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+  width: 100%;
+}
+
+#undo-btn, #redo-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+#undo-btn.disabled, #redo-btn.disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Move History */
+#move-history-content {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.move-entry {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  margin: 0.25rem 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.move-entry:hover {
+  background-color: #f8f9fa;
+}
+
+.move-entry.current {
+  background-color: #e3f2fd;
+  border-left-color: #2196f3;
+}
+
+.move-entry.black {
+  border-left-color: #2c3e50;
+}
+
+.move-entry.white {
+  border-left-color: #bdc3c7;
+}
+
+.move-number {
+  font-weight: 700;
+  color: #6c757d;
+  min-width: 30px;
+  font-size: 0.8rem;
+}
+
+.move-description {
+  flex: 1;
+  margin-left: 0.5rem;
+  font-size: 0.85rem;
+  color: #2c3e50;
+}
+
+/* Game Statistics */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #8B4513;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+/* Panel Toggle Buttons */
+.panel-toggle {
+  display: none;
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+
+.panel-toggle:hover {
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Mobile Controls */
+.mobile-only {
+  display: none;
+}
+
+#mobile-controls {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 1rem;
+  z-index: 1000;
+}
+
+.mobile-toggle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #8B4513, #A0522D);
+  color: white;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+
+.mobile-toggle:hover {
+  transform: scale(1.1);
+}
+
+/* Highlight Classes for Game States */
+.selected {
+  background-color: rgba(255, 255, 0, 0.6) !important;
+  box-shadow: inset 0 0 10px rgba(255, 255, 0, 0.8);
+}
+
+.available-move {
+  background-color: rgba(0, 255, 0, 0.4) !important;
+}
+
+.capture-move {
+  background-color: rgba(255, 0, 0, 0.6) !important;
+  animation: highlightPulse 1.2s ease-in-out infinite;
+}
+
+.no-moves {
+  background-color: rgba(128, 128, 128, 0.3) !important;
+}
+
+@keyframes highlightPulse {
+  0% { box-shadow: inset 0 0 5px rgba(255,0,0,0.4); }
+  50% { box-shadow: inset 0 0 15px rgba(255,0,0,0.8); }
+  100% { box-shadow: inset 0 0 5px rgba(255,0,0,0.4); }
+}
+
+/* Debug Button */
+#debug-main-btn {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.1);
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: all 0.3s ease;
+  z-index: 1001;
+}
+
+#debug-main-btn:hover {
+  opacity: 1;
+  background: rgba(0,0,0,0.3);
+}
+
+/* Modal Styles (Keep existing modal styles) */
+.hidden {
+  display: none !important;
+}
+
+#win-modal, #debug-modal, #save-load-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1002;
+}
+
+#win-modal > div, #debug-modal-content, #save-load-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 90%;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+/* Responsive Design with Smart Auto-Hide */
+
+/* Large screens - all panels visible */
+@media (min-width: 1400px) {
+  #game-layout {
+    grid-template-columns: 350px 1fr 320px;
+  }
+}
+
+/* Medium-large screens - slightly smaller panels */
+@media (max-width: 1399px) and (min-width: 1200px) {
+  #game-layout {
+    grid-template-columns: 320px 1fr 300px;
+  }
+}
+
+/* Medium screens - hide right panel first (less critical) */
+@media (max-width: 1199px) and (min-width: 1000px) {
+  #game-layout {
+    grid-template-columns: 300px 1fr 0px;
+    grid-template-areas: "left center right";
+  }
+  
+  #right-panel {
+    display: none;
+  }
+  
+  /* Show toggle button for right panel */
+  #toggle-right-panel {
+    display: block !important;
+    position: fixed;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    z-index: 1000;
+    background: linear-gradient(135deg, #8B4513, #A0522D);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+  }
+  
+  #toggle-right-panel:hover {
+    transform: translateY(-50%) scale(1.1);
+  }
+}
+
+/* Small-medium screens - hide both panels, show only board */
+@media (max-width: 999px) and (min-width: 769px) {
+  #game-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: "center";
+  }
+  
+  #left-panel, #right-panel {
+    display: none;
+  }
+  
+  /* Show toggle buttons for both panels */
+  #toggle-left-panel, #toggle-right-panel {
+    display: block !important;
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1000;
+    background: linear-gradient(135deg, #8B4513, #A0522D);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
+  }
+  
+  #toggle-left-panel {
+    left: 10px;
+  }
+  
+  #toggle-right-panel {
+    right: 10px;
+  }
+  
+  #toggle-left-panel:hover, #toggle-right-panel:hover {
+    transform: translateY(-50%) scale(1.1);
+  }
+  
+  /* Game board gets more space */
+  #game-board {
+    width: min(60vh, 70vw);
+    height: min(60vh, 70vw);
+    max-width: 500px;
+    max-height: 500px;
+  }
+}
+
+/* Mobile screens - overlay panels */
+@media (max-width: 768px) {
+  #game-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: "center";
+  }
+  
+  #left-panel, #right-panel {
+    position: fixed;
+    top: 0;
+    width: 300px;
+    height: 100vh;
+    z-index: 999;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    display: flex;
+  }
+  
+  #right-panel {
+    right: 0;
+    transform: translateX(100%);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+  }
+  
+  #left-panel.show {
+    transform: translateX(0);
+  }
+  
+  #right-panel.show {
+    transform: translateX(0);
+  }
+  
+  .mobile-only {
+    display: block;
+  }
+  
+  #game-board-container {
+    padding: 1rem;
+  }
+  
+  #game-board {
+    width: min(65vh, 90vw);
+    height: min(65vh, 90vw);
+  }
+  
+  /* Hide standalone toggle buttons on mobile - use mobile controls instead */
+  #toggle-left-panel, #toggle-right-panel {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  #left-panel, #right-panel {
+    width: 100vw;
+  }
+  
+  #game-board {
+    width: min(60vh, 95vw);
+    height: min(60vh, 95vw);
+  }
+  
+  .panel-section {
+    padding: 0.5rem;
+  }
+  
+  .control-group {
+    flex-direction: column;
+  }
+}

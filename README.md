@@ -25,9 +25,12 @@ Dam Haji is a traditional Malaysian board game similar to international checkers
 
 - **Traditional Rules**: Faithfully implements authentic Malaysian Dam Haji gameplay
 - **AI Opponent**: Three difficulty levels (Easy, Medium, Hard) with intelligent move selection
+- **Modern UI**: Complete responsive redesign for optimal user experience
 - **Progressive Web App (PWA)**: Install on desktop and mobile devices
 - **Offline Support**: Play without internet connection
-- **Responsive Design**: Works seamlessly across all devices
+- **Cross-Device Compatible**: Seamless experience on desktop, tablet, and mobile
+- **Performance Optimized**: Smooth gameplay with no browser slowdowns
+- **Modular Architecture**: Clean, maintainable codebase for future enhancements
 - **Cultural Preservation**: Maintains the essence of traditional Malaysian gaming
 
 ## 🎯 Game Rules
@@ -185,14 +188,31 @@ Dam Haji is more than just a game—it's a piece of Malaysian cultural heritage.
 - **Pieces**: Bottle caps, shells, or small stones
 - **Crown**: Stacked pieces or marked pieces for Haji
 
+## 📚 Documentation
+
+Comprehensive documentation is available for developers, designers, and contributors:
+
+- **[📋 Documentation Index](docs/README.md)** - Complete documentation overview
+- **[🚀 Implementation Summary](docs/implementation/UI_OVERHAUL_IMPLEMENTATION_SUMMARY.md)** - UI overhaul details and achievements  
+- **[🏗️ Technical Architecture](docs/implementation/TECHNICAL_ARCHITECTURE.md)** - System architecture and design patterns
+- **[🔧 Development Process](docs/development/)** - Phase-by-phase development documentation
+- **[🎮 Game Rules](docs/development/GAME_RULES.md)** - Complete game mechanics and rules
+
+### For Developers
+- **Architecture Overview**: See [Technical Architecture](docs/implementation/TECHNICAL_ARCHITECTURE.md)
+- **Code Organization**: Check [Implementation Summary](docs/implementation/UI_OVERHAUL_IMPLEMENTATION_SUMMARY.md#modular-javascript-architecture)
+- **Performance Notes**: Review optimization strategies in technical docs
+
 ## 🤝 Contributing
 
 This project aims to preserve and promote traditional Malaysian games. Contributions are welcome, especially:
 - Bug reports and fixes
-- UI/UX improvements
+- UI/UX improvements  
 - Additional game variations
 - Documentation improvements
 - Cultural context additions
+
+Please refer to the [documentation](docs/README.md) for technical details and architecture information.
 
 ## 📄 License
 
