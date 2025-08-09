@@ -84,8 +84,34 @@
         <div id="game-board"></div>
       </div>
 
-      <!-- Mobile Stats & Recent Moves (Visible only on mobile if space permits) -->
-      <div id="mobile-game-info" class="mobile-only">
+      <!-- Mobile Action Buttons (Always visible on mobile) -->
+      <div id="mobile-action-buttons" class="mobile-only">
+        <div class="mobile-action-row">
+          <button id="mobile-undo-btn" class="mobile-action-btn">
+            <span class="btn-icon">↶</span>
+            <span class="btn-text">Undo</span>
+          </button>
+          <button id="mobile-redo-btn" class="mobile-action-btn">
+            <span class="btn-icon">↷</span>
+            <span class="btn-text">Redo</span>
+          </button>
+          <button id="mobile-save-btn" class="mobile-action-btn">
+            <span class="btn-icon">💾</span>
+            <span class="btn-text">Save</span>
+          </button>
+          <button id="mobile-load-btn" class="mobile-action-btn">
+            <span class="btn-icon">📁</span>
+            <span class="btn-text">Load</span>
+          </button>
+          <button id="mobile-reset-btn" class="mobile-action-btn">
+            <span class="btn-icon">🔄</span>
+            <span class="btn-text">Reset</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mobile Stats & Recent Moves (Visible only if space permits) -->
+      <div id="mobile-game-info" class="mobile-only mobile-space-permitting">
         <div class="mobile-stats">
           <div class="mobile-stat">
             <span class="mobile-stat-label">Moves</span>

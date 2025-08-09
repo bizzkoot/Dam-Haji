@@ -103,6 +103,32 @@ class ModernUI {
             });
         });
 
+        // Mobile action buttons
+        const mobileUndoBtn = document.getElementById('mobile-undo-btn');
+        if (mobileUndoBtn) {
+            mobileUndoBtn.addEventListener('click', () => this.handleUndo());
+        }
+        
+        const mobileRedoBtn = document.getElementById('mobile-redo-btn');
+        if (mobileRedoBtn) {
+            mobileRedoBtn.addEventListener('click', () => this.handleRedo());
+        }
+        
+        const mobileSaveBtn = document.getElementById('mobile-save-btn');
+        if (mobileSaveBtn) {
+            mobileSaveBtn.addEventListener('click', () => this.handleSave());
+        }
+        
+        const mobileLoadBtn = document.getElementById('mobile-load-btn');
+        if (mobileLoadBtn) {
+            mobileLoadBtn.addEventListener('click', () => this.handleLoad());
+        }
+        
+        const mobileResetBtn = document.getElementById('mobile-reset-btn');
+        if (mobileResetBtn) {
+            mobileResetBtn.addEventListener('click', () => this.handleReset());
+        }
+
         // Close buttons for slide panels
         document.querySelectorAll('.close-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -443,14 +469,16 @@ class ModernUI {
     }
 
     handleReset() {
-        if (confirm('Are you sure you want to reset the game? All progress will be lost.')) {
-            this.showNotification('Game reset', 'info');
-            // Trigger reset functionality
+        // Trigger reset game functionality with confirmation
+        if (confirm('Are you sure you want to reset the game? This will clear all progress.')) {
             if (typeof window.resetGame === 'function') {
                 window.resetGame();
+                this.showNotification('Game reset successfully', 'success');
             }
         }
     }
+
+
 
     handleResize() {
         // Close panels on mobile orientation change
