@@ -13,6 +13,7 @@ class ModernUI {
         this.setupPanels();
         this.updateUI();
         this.initializeGameDisplay();
+        this.initBoardResizing();
     }
 
     initializeGameDisplay() {
@@ -489,6 +490,10 @@ class ModernUI {
         if (window.innerWidth <= 768) {
             this.closeAllPanels();
         }
+        
+        // Update board size and mobile space permitting elements
+        this.updateBoardSize();
+        this.checkMobileSpacePermitting();
     }
     
     updateMobileAIStatus(enabled) {
@@ -572,6 +577,92 @@ class ModernUI {
         this.updateScore(12, 12);
         this.updateStats(0, 0, 0);
     }
+    
+    // Dynamic board sizing methods
+    updateBoardSize() {
+        const boardContainer = document.getElementById('board-container');
+        if (!boardContainer) return;
+        
+        // Get available space within the container
+        const containerWidth = boardContainer.clientWidth;
+        const containerHeight = boardContainer.clientHeight;
+        
+        // Account for padding/margins
+        const availableWidth = containerWidth - 20; // Small padding
+        const availableHeight = containerHeight - 20; // Small padding
+        
+        // Calculate board size (maintaining square aspect ratio)
+        const maxSize = Math.min(availableWidth, availableHeight, 600); // 600px max size
+        const boardSize = Math.max(maxSize, 300); // Minimum 300px
+        
+        const gameBoard = document.getElementById('game-board');
+        if (gameBoard) {
+            gameBoard.style.width = `${boardSize}px`;
+            gameBoard.style.height = `${boardSize}px`;
+        }
+    }
+    
+    initBoardResizing() {
+        // Initial sizing
+        this.updateBoardSize();
+        
+        // Set up resize observer
+        const boardContainer = document.getElementById('board-container');
+        if (boardContainer) {
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    if (entry.target === boardContainer) {
+                        this.updateBoardSize();
+                        this.checkMobileSpacePermitting();
+                    }
+                }
+            });
+            
+            resizeObserver.observe(boardContainer);
+        }
+        
+        // Also listen to window resize events
+        window.addEventListener('resize', () => {
+            this.updateBoardSize();
+            this.checkMobileSpacePermitting();
+        });
+        
+        // Initial check
+        this.checkMobileSpacePermitting();
+    }
+    
+    checkMobileSpacePermitting() {
+        // Check if there's enough space to show the mobile game info
+        const mobileGameInfo = document.getElementById('mobile-game-info');
+        if (!mobileGameInfo) return;
+        
+        // Get the total available height
+        const availableHeight = window.innerHeight;
+        
+        // Calculate the height of all fixed elements
+        const topNav = document.getElementById('top-nav');
+        const mobileAiControls = document.getElementById('mobile-ai-controls');
+        const mobileActionButtons = document.getElementById('mobile-action-buttons');
+        const boardContainer = document.getElementById('board-container');
+        
+        if (!topNav || !mobileAiControls || !mobileActionButtons || !boardContainer) return;
+        
+        // Estimate heights (we'll use getBoundingClientRect for more accuracy)
+        const topNavHeight = topNav.getBoundingClientRect().height;
+        const mobileAiControlsHeight = mobileAiControls.getBoundingClientRect().height;
+        const mobileActionButtonsHeight = mobileActionButtons.getBoundingClientRect().height;
+        
+        // Estimate board height (it will fill the remaining space)
+        const fixedElementsHeight = topNavHeight + mobileAiControlsHeight + mobileActionButtonsHeight;
+        const estimatedBoardHeight = availableHeight - fixedElementsHeight;
+        
+        // If there's enough space for a reasonable game info section, show it
+        // We'll show it if there's at least 100px extra space beyond what's needed for a decent board
+        if (estimatedBoardHeight > 400) {
+            // There's enough space, but we'll still rely on the CSS media query
+            // This is just for demonstration - the CSS approach is already good
+        }
+    }
 }
 
 // Add slide animation styles
@@ -596,3 +687,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export for use by other scripts
 window.ModernUI = ModernUI;
+
+// Debug function to test board sizing (can be removed in production)
+window.testBoardSizing = function() {
+    if (window.modernUI) {
+        window.modernUI.updateBoardSize();
+        console.log('Board sizing updated');
+    }
+};
