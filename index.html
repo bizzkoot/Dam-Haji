@@ -16,9 +16,15 @@
       <div class="nav-section">
         <h1>Dam Haji</h1>
         <div class="game-status">
+          <!-- Original player indicator (hidden on mobile) -->
           <div id="current-player-indicator" class="player-indicator black-turn">
             <div class="player-avatar"></div>
             <span id="current-player-text">Black's Turn</span>
+          </div>
+          <!-- New mobile player indicator -->
+          <div id="mobile-current-player" class="mobile-player-indicator mobile-only">
+            <div id="mobile-player-box" class="mobile-player-box black-active"></div>
+            <span id="mobile-player-arrow" class="mobile-player-arrow black-turn">→</span>
           </div>
         </div>
       </div>
@@ -84,32 +90,6 @@
         <div id="game-board"></div>
       </div>
 
-      <!-- Mobile Action Buttons (Always visible on mobile) -->
-      <div id="mobile-action-buttons" class="mobile-only">
-        <div class="mobile-action-row">
-          <button id="mobile-undo-btn" class="mobile-action-btn">
-            <span class="btn-icon">↶</span>
-            <span class="btn-text">Undo</span>
-          </button>
-          <button id="mobile-redo-btn" class="mobile-action-btn">
-            <span class="btn-icon">↷</span>
-            <span class="btn-text">Redo</span>
-          </button>
-          <button id="mobile-save-btn" class="mobile-action-btn">
-            <span class="btn-icon">💾</span>
-            <span class="btn-text">Save</span>
-          </button>
-          <button id="mobile-load-btn" class="mobile-action-btn">
-            <span class="btn-icon">📁</span>
-            <span class="btn-text">Load</span>
-          </button>
-          <button id="mobile-reset-btn" class="mobile-action-btn">
-            <span class="btn-icon">🔄</span>
-            <span class="btn-text">Reset</span>
-          </button>
-        </div>
-      </div>
-
       <!-- Mobile Stats & Recent Moves (Visible only if space permits) -->
       <div id="mobile-game-info" class="mobile-only mobile-space-permitting">
         <div class="mobile-stats">
@@ -131,6 +111,32 @@
           <div id="mobile-moves-list">
             <div class="no-moves">No moves yet</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Mobile Action Buttons (Always visible on mobile) -->
+      <div id="mobile-action-buttons" class="mobile-only">
+        <div class="mobile-action-row">
+          <button id="mobile-undo-btn" class="mobile-action-btn" title="Undo last move">
+            <span class="btn-icon">↶</span>
+            <span class="btn-text">Undo</span>
+          </button>
+          <button id="mobile-redo-btn" class="mobile-action-btn" title="Redo previously undone move">
+            <span class="btn-icon">↷</span>
+            <span class="btn-text">Redo</span>
+          </button>
+          <button id="mobile-save-btn" class="mobile-action-btn" title="Save current game">
+            <span class="btn-icon">💾</span>
+            <span class="btn-text">Save</span>
+          </button>
+          <button id="mobile-load-btn" class="mobile-action-btn" title="Load saved game">
+            <span class="btn-icon">📁</span>
+            <span class="btn-text">Load</span>
+          </button>
+          <button id="mobile-reset-btn" class="mobile-action-btn" title="Start new game">
+            <span class="btn-icon">🔄</span>
+            <span class="btn-text">Reset</span>
+          </button>
         </div>
       </div>
 
@@ -295,6 +301,8 @@
     <div id="overlay" class="hidden"></div>
 
   </div>
+
+  <!-- Mobile Debug Info removed - mobile layout working correctly -->
 
   <!-- Debug Button (Hidden by default) -->
   <button id="debug-main-btn" style="position: fixed; bottom: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; background: rgba(0,0,0,0.1); border: none; font-size: 20px; cursor: pointer; opacity: 0.3; z-index: 1001; color: #666;">⚙️</button>

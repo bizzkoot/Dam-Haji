@@ -50,6 +50,18 @@ class GameUIIntegration {
                 this.modernUI.updateCurrentPlayer(currentPlayer === "B" ? "Black" : "White");
             }
             
+            // Update mobile player indicator
+            const mobilePlayerBox = document.getElementById("mobile-player-box");
+            const mobilePlayerArrow = document.getElementById("mobile-player-arrow");
+            
+            if (mobilePlayerBox) {
+                mobilePlayerBox.className = `mobile-player-box ${currentPlayer === 'B' ? 'black-active' : 'white-active'}`;
+            }
+            
+            if (mobilePlayerArrow) {
+                mobilePlayerArrow.className = `mobile-player-arrow ${currentPlayer === 'B' ? 'black-turn' : 'white-turn'}`;
+            }
+            
             // Update any legacy elements that might still exist
             const display = document.getElementById("current-player");
             if (display) {

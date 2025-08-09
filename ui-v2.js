@@ -98,8 +98,6 @@ class ModernUI {
         document.querySelectorAll('.mobile-diff-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.setDifficulty(btn.dataset.level);
-                // Sync with desktop buttons
-                this.syncDesktopDifficulty(btn.dataset.level);
             });
         });
 
@@ -363,15 +361,21 @@ class ModernUI {
     }
 
     setDifficulty(level) {
-        // Update active button
+        // Update desktop difficulty buttons
         document.querySelectorAll('.diff-btn').forEach(btn => {
             btn.classList.remove('active');
+            if (btn.dataset.level === level) {
+                btn.classList.add('active');
+            }
         });
         
-        const targetBtn = document.querySelector(`[data-level="${level}"]`);
-        if (targetBtn) {
-            targetBtn.classList.add('active');
-        }
+        // Update mobile difficulty buttons
+        document.querySelectorAll('.mobile-diff-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.level === level) {
+                btn.classList.add('active');
+            }
+        });
         
         // Update global AI difficulty
         if (typeof window.aiDifficulty !== 'undefined') {
