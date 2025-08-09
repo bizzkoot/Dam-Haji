@@ -163,6 +163,10 @@ class GameUIIntegration {
                 const captures = moveHistory.filter(m => m.isCapture).length;
                 const hajis = document.querySelectorAll('.piece.haji').length;
                 this.modernUI.updateStats(moveHistory.length, captures, hajis);
+                
+                // Update mobile stats and recent moves
+                this.modernUI.updateMobileStats(moveHistory.length, captures, hajis);
+                this.modernUI.addMobileRecentMove(move.moveNumber || moveHistory.length, moveDescription);
             }
             
             // Update Move History panel if it's open
@@ -274,6 +278,10 @@ class GameUIIntegration {
                 gameIntegration.modernUI.showNotification('Game reset', 'info');
                 gameIntegration.modernUI.clearRecentMoves();
                 gameIntegration.modernUI.updateStats(0, 0, 0);
+                
+                // Clear mobile elements
+                gameIntegration.modernUI.clearMobileRecentMoves();
+                gameIntegration.modernUI.updateMobileStats(0, 0, 0);
             }
             
             if (aiEnabled && currentPlayer === aiPlayer) {

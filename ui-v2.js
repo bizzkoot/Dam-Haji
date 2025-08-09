@@ -46,7 +46,7 @@ class ModernUI {
         document.getElementById('load-btn')?.addEventListener('click', () => this.handleLoad());
         document.getElementById('reset-btn')?.addEventListener('click', () => this.handleReset());
 
-        // AI toggle
+        // AI toggle (desktop)
         const aiSwitchElement = document.getElementById('ai-switch');
         if (aiSwitchElement) {
             aiSwitchElement.addEventListener('change', (e) => {
@@ -54,16 +54,53 @@ class ModernUI {
                 console.log('Switch element state after click:', aiSwitchElement.checked);
                 this.toggleAI(e.target.checked);
                 
+                // Sync with mobile switch
+                const mobileSwitch = document.getElementById('mobile-ai-switch');
+                if (mobileSwitch) {
+                    mobileSwitch.checked = e.target.checked;
+                    this.updateMobileAIStatus(e.target.checked);
+                }
+                
                 // Double-check the switch state after our toggle
                 setTimeout(() => {
                     console.log('Switch state after toggleAI:', aiSwitchElement.checked);
                 }, 10);
             });
         }
+        
+        // AI toggle (mobile)
+        const mobileAiSwitchElement = document.getElementById('mobile-ai-switch');
+        if (mobileAiSwitchElement) {
+            mobileAiSwitchElement.addEventListener('change', (e) => {
+                console.log('Mobile AI switch toggled:', e.target.checked);
+                this.toggleAI(e.target.checked);
+                
+                // Sync with desktop switch
+                const desktopSwitch = document.getElementById('ai-switch');
+                if (desktopSwitch) {
+                    desktopSwitch.checked = e.target.checked;
+                }
+                
+                this.updateMobileAIStatus(e.target.checked);
+            });
+        }
 
-        // Difficulty buttons
+        // Difficulty buttons (desktop)
         document.querySelectorAll('.diff-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.setDifficulty(btn.dataset.level));
+            btn.addEventListener('click', () => {
+                this.setDifficulty(btn.dataset.level);
+                // Sync with mobile buttons
+                this.syncMobileDifficulty(btn.dataset.level);
+            });
+        });
+        
+        // Difficulty buttons (mobile)
+        document.querySelectorAll('.mobile-diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.setDifficulty(btn.dataset.level);
+                // Sync with desktop buttons
+                this.syncDesktopDifficulty(btn.dataset.level);
+            });
         });
 
         // Close buttons for slide panels
@@ -419,6 +456,79 @@ class ModernUI {
         // Close panels on mobile orientation change
         if (window.innerWidth <= 768) {
             this.closeAllPanels();
+        }
+    }
+    
+    updateMobileAIStatus(enabled) {
+        const statusText = document.getElementById('mobile-ai-status-text');
+        if (statusText) {
+            statusText.textContent = enabled ? 'AI On' : 'AI Off';
+        }
+    }
+    
+    syncMobileDifficulty(level) {
+        // Update mobile difficulty buttons
+        document.querySelectorAll('.mobile-diff-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.level === level) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    
+    syncDesktopDifficulty(level) {
+        // Update desktop difficulty buttons
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.level === level) {
+                btn.classList.add('active');
+            }
+        });
+    }
+    
+    updateMobileStats(moves, captures, haji) {
+        document.getElementById('mobile-move-count').textContent = moves;
+        document.getElementById('mobile-capture-count').textContent = captures;
+        document.getElementById('mobile-haji-count').textContent = haji;
+    }
+    
+    addMobileRecentMove(moveNumber, description) {
+        const mobileRecentMoves = document.getElementById('mobile-moves-list');
+        if (!mobileRecentMoves) return;
+        
+        // Clear the "No moves yet" placeholder
+        const noMovesElements = Array.from(mobileRecentMoves.children).filter(el => 
+            el.textContent.trim() === 'No moves yet'
+        );
+        noMovesElements.forEach(el => el.remove());
+        
+        const moveItem = document.createElement('div');
+        moveItem.className = 'move-item';
+        moveItem.innerHTML = `
+            <span class="move-num">${moveNumber}.</span>
+            <span class="move-desc">${description}</span>
+        `;
+        
+        // Add to top
+        mobileRecentMoves.insertBefore(moveItem, mobileRecentMoves.firstChild);
+        
+        // Keep only last 3 moves (mobile has less space)
+        let moveItems = mobileRecentMoves.querySelectorAll('.move-item');
+        while (moveItems.length > 3) {
+            const lastMoveItem = mobileRecentMoves.querySelector('.move-item:last-child');
+            if (lastMoveItem) {
+                mobileRecentMoves.removeChild(lastMoveItem);
+                moveItems = mobileRecentMoves.querySelectorAll('.move-item');
+            } else {
+                break;
+            }
+        }
+    }
+    
+    clearMobileRecentMoves() {
+        const mobileRecentMoves = document.getElementById('mobile-moves-list');
+        if (mobileRecentMoves) {
+            mobileRecentMoves.innerHTML = '<div class="no-moves">No moves yet</div>';
         }
     }
 

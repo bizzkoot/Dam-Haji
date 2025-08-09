@@ -61,9 +61,51 @@
     <!-- Main Game Area -->
     <main id="game-area">
       
+      <!-- Mobile AI Controls (Visible only on mobile) -->
+      <div id="mobile-ai-controls" class="mobile-only">
+        <div class="mobile-ai-section">
+          <div class="mobile-ai-toggle">
+            <label class="switch mobile-switch">
+              <input type="checkbox" id="mobile-ai-switch">
+              <span class="slider"></span>
+            </label>
+            <span id="mobile-ai-status-text">AI Off</span>
+          </div>
+          <div class="mobile-difficulty-selector">
+            <button class="mobile-diff-btn" data-level="easy" id="mobile-ai-easy">Easy</button>
+            <button class="mobile-diff-btn active" data-level="medium" id="mobile-ai-medium">Medium</button>
+            <button class="mobile-diff-btn" data-level="hard" id="mobile-ai-hard">Hard</button>
+          </div>
+        </div>
+      </div>
+      
       <!-- Game Board Container -->
       <div id="board-container">
         <div id="game-board"></div>
+      </div>
+
+      <!-- Mobile Stats & Recent Moves (Visible only on mobile if space permits) -->
+      <div id="mobile-game-info" class="mobile-only">
+        <div class="mobile-stats">
+          <div class="mobile-stat">
+            <span class="mobile-stat-label">Moves</span>
+            <span class="mobile-stat-value" id="mobile-move-count">0</span>
+          </div>
+          <div class="mobile-stat">
+            <span class="mobile-stat-label">Captures</span>
+            <span class="mobile-stat-value" id="mobile-capture-count">0</span>
+          </div>
+          <div class="mobile-stat">
+            <span class="mobile-stat-label">Haji</span>
+            <span class="mobile-stat-value" id="mobile-haji-count">0</span>
+          </div>
+        </div>
+        <div id="mobile-recent-moves" class="mobile-recent-moves">
+          <h4>Recent Moves</h4>
+          <div id="mobile-moves-list">
+            <div class="no-moves">No moves yet</div>
+          </div>
+        </div>
       </div>
 
       <!-- Side Info Panel (Collapsible) -->

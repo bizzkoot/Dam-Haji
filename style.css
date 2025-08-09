@@ -766,6 +766,11 @@ input:checked + .slider:before {
   display: none !important;
 }
 
+/* Hide mobile elements on desktop */
+.mobile-only {
+  display: none;
+}
+
 /* Responsive Design */
 @media (max-width: 1024px) {
   #info-panel {
@@ -805,16 +810,126 @@ input:checked + .slider:before {
   }
   
   #info-panel {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    max-width: 320px;
-    z-index: var(--z-panel);
+    display: none; /* Hide desktop info panel on mobile */
   }
   
-  #info-panel.active {
-    right: 0;
+  /* Mobile-only controls */
+  .mobile-only {
+    display: block !important;
+  }
+  
+  /* Mobile AI Controls */
+  #mobile-ai-controls {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    margin: 8px 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .mobile-ai-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .mobile-ai-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+  }
+  
+  .mobile-switch {
+    transform: scale(0.8);
+  }
+  
+  #mobile-ai-status-text {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  
+  .mobile-difficulty-selector {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+  }
+  
+  .mobile-diff-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  
+  .mobile-diff-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+  }
+  
+  .mobile-diff-btn:hover:not(.active) {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+  }
+  
+  /* Mobile Game Info */
+  #mobile-game-info {
+    margin: 8px 12px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .mobile-stats {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .mobile-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+  
+  .mobile-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  
+  .mobile-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  
+  .mobile-recent-moves h4 {
+    font-size: 0.9rem;
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+  }
+  
+  #mobile-moves-list {
+    max-height: 80px;
+    overflow-y: auto;
+    font-size: 0.8rem;
+  }
+  
+  #mobile-moves-list .move-item {
+    padding: 2px 0;
+    font-size: 0.75rem;
   }
   
   #board-container {
