@@ -257,23 +257,34 @@ function updateRecentMovesAfterUndoRedo() {
     if (window.gameIntegration && window.gameIntegration.modernUI) {
         const modernUI = window.gameIntegration.modernUI;
         
-        // Clear existing recent moves
+        // Clear existing recent moves (both desktop and mobile)
         modernUI.clearRecentMoves();
+        modernUI.clearMobileRecentMoves();
         
-        // Re-add moves from current moveHistory (last 5 moves)
-        const startIndex = Math.max(0, moveHistory.length - 5);
-        // Add moves in chronological order since addRecentMove adds each new one to the top
+        // Re-add moves from current moveHistory (last 5 moves for desktop, last 3 for mobile)
+        const desktopStartIndex = Math.max(0, moveHistory.length - 5);
+        const mobileStartIndex = Math.max(0, moveHistory.length - 3);
+        
+        // Add moves for desktop (in chronological order since addRecentMove adds each new one to the top)
         // This will result in newest moves at top, oldest at bottom (correct order)
-        for (let i = startIndex; i < moveHistory.length; i++) {
+        for (let i = desktopStartIndex; i < moveHistory.length; i++) {
             const move = moveHistory[i];
             const moveDescription = formatMoveForRecentMoves(move);
             modernUI.addRecentMove(i + 1, moveDescription);
         }
         
-        // Update statistics
+        // Add moves for mobile (in chronological order since addMobileRecentMove adds each new one to the top)
+        for (let i = mobileStartIndex; i < moveHistory.length; i++) {
+            const move = moveHistory[i];
+            const moveDescription = formatMoveForRecentMoves(move);
+            modernUI.addMobileRecentMove(i + 1, moveDescription);
+        }
+        
+        // Update statistics (both desktop and mobile)
         const captures = moveHistory.filter(m => m.isCapture).length;
         const hajis = document.querySelectorAll('.piece.haji').length;
         modernUI.updateStats(moveHistory.length, captures, hajis);
+        modernUI.updateMobileStats(moveHistory.length, captures, hajis);
     }
 }
 
