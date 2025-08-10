@@ -34,6 +34,8 @@
   --z-overlay: 1000;
   --z-panel: 1001;
   --z-modal: 1002;
+  
+  --hover-bg: #F8F9FA;
 }
 
 * {
@@ -187,14 +189,11 @@ body {
 }
 
 #game-board {
-  /* Remove fixed viewport sizing */
-  /* width: min(70vh, 70vw); */
-  /* height: min(70vh, 70vw); */
+  /* Base responsive sizing - will be overridden by media queries */
+  width: 400px; /* Default fallback */
+  height: 400px; /* Default fallback */
   
-  /* Use dynamic sizing from JavaScript */
-  width: 400px; /* Default size */
-  height: 400px; /* Default size */
-  
+  /* Responsive fallbacks */
   max-width: 100%;
   max-height: 100%;
   min-width: 300px;
@@ -336,6 +335,23 @@ body {
 
 #info-panel.collapsed {
   width: 60px;
+}
+
+/* When info panel is collapsed, maximize board size */
+#info-panel.collapsed ~ #board-container #game-board {
+  width: min(80vh, calc(100vw - 100px - 40px));
+  height: min(80vh, calc(100vw - 100px - 40px));
+}
+
+/* Board size classes modify the collapsed panel sizing */
+#info-panel.collapsed ~ #board-container #game-board.board-small {
+  width: min(70vh, calc(100vw - 100px - 40px));
+  height: min(70vh, calc(100vw - 100px - 40px));
+}
+
+#info-panel.collapsed ~ #board-container #game-board.board-large {
+  width: min(90vh, calc(100vw - 100px - 40px));
+  height: min(90vh, calc(100vw - 100px - 40px));
 }
 
 #info-panel.collapsed .panel-header h3 {
@@ -790,13 +806,87 @@ input:checked + .slider:before {
   #info-panel.collapsed {
     width: 50px;
   }
+  
+  /* Adjust board sizing for smaller desktop screens */
+  #game-board {
+    width: min(70vh, calc(100vw - 300px - 40px));
+    height: min(70vh, calc(100vw - 300px - 40px));
+  }
+  
+  /* Board size classes modify the responsive sizing */
+  #game-board.board-small {
+    width: min(60vh, calc(100vw - 300px - 40px));
+    height: min(60vh, calc(100vw - 300px - 40px));
+  }
+  
+  #game-board.board-large {
+    width: min(80vh, calc(100vw - 300px - 40px));
+    height: min(80vh, calc(100vw - 300px - 40px));
+  }
+}
+
+/* Base desktop board scaling */
+@media (min-width: 769px) {
+  #game-board {
+    width: min(70vh, calc(100vw - 400px - 40px));
+    height: min(70vh, calc(100vw - 400px - 40px));
+  }
+  
+  /* Board size classes modify the responsive sizing */
+  #game-board.board-small {
+    width: min(60vh, calc(100vw - 400px - 40px));
+    height: min(60vh, calc(100vw - 400px - 40px));
+  }
+  
+  #game-board.board-large {
+    width: min(80vh, calc(100vw - 400px - 40px));
+    height: min(80vh, calc(100vw - 400px - 40px));
+  }
+}
+
+/* Desktop-specific board scaling */
+@media (min-width: 1025px) {
+  #game-board {
+    width: min(75vh, calc(100vw - 400px - 40px));
+    height: min(75vh, calc(100vw - 400px - 40px));
+  }
+  
+  /* Board size classes modify the responsive sizing */
+  #game-board.board-small {
+    width: min(65vh, calc(100vw - 400px - 40px));
+    height: min(65vh, calc(100vw - 400px - 40px));
+  }
+  
+  #game-board.board-large {
+    width: min(85vh, calc(100vw - 400px - 40px));
+    height: min(85vh, calc(100vw - 400px - 40px));
+  }
+}
+
+/* Large desktop screens - maximize board size */
+@media (min-width: 1440px) {
+  #game-board {
+    width: min(80vh, calc(100vw - 450px - 40px));
+    height: min(80vh, calc(100vw - 450px - 40px));
+  }
+  
+  /* Board size classes modify the responsive sizing */
+  #game-board.board-small {
+    width: min(70vh, calc(100vw - 450px - 40px));
+    height: min(70vh, calc(100vw - 450px - 40px));
+  }
+  
+  #game-board.board-large {
+    width: min(90vh, calc(100vw - 450px - 40px));
+    height: min(90vh, calc(100vw - 450px - 40px));
+  }
 }
 
 @media (max-width: 768px) {
   #app {
-    margin: 4px;
-    border-radius: var(--radius-md);
-    height: 100vh;
+    margin: 0;
+    border-radius: 0;
+    height: 100vh; /* Use stable vh, not dvh, to prevent "bounce" */
     max-height: 100vh;
     overflow: hidden;
     display: flex;
@@ -804,11 +894,53 @@ input:checked + .slider:before {
   }
   
   #top-nav {
+    flex-shrink: 0; /* Prevent shrinking */
     padding: 6px 8px;
-    flex-shrink: 0;
-    align-items: center;
     min-height: 50px;
     position: relative;
+  }
+  
+  #game-area {
+    flex: 1; /* Allow game-area to fill space between header and footer */
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Critical for nested flex containers */
+    overflow: hidden;
+  }
+  
+  #mobile-ai-controls,
+  #mobile-game-info,
+  #mobile-action-buttons {
+    flex-shrink: 0; /* Prevent these elements from shrinking */
+    margin: 4px 8px;
+  }
+  
+  #mobile-action-buttons {
+    margin-top: auto; /* Push to the bottom of the flex container */
+    margin-bottom: 8px;
+  }
+
+  #board-container {
+    flex: 1; /* This is the key: let the board container be the flexible element */
+    min-height: 0; /* Allow it to shrink */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4px;
+  }
+  
+  #game-board {
+    /* Let the size be determined by the container */
+    max-width: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    background: var(--primary-color);
+    padding: 8px;
+    aspect-ratio: 1 / 1;
   }
   
   #top-nav h1 {
@@ -821,20 +953,10 @@ input:checked + .slider:before {
     align-items: center;
   }
   
-  .nav-section:first-child {
-    flex: 0 0 auto;
-  }
+  .nav-section:first-child { flex: 0 0 auto; }
+  .nav-section:nth-child(2) { flex: 1; justify-content: center; }
+  .nav-section:last-child { flex: 0 0 auto; }
   
-  .nav-section:nth-child(2) {
-    flex: 1;
-    justify-content: center;
-  }
-  
-  .nav-section:last-child {
-    flex: 0 0 auto;
-  }
-  
-  /* New Mobile Player Indicator Design */
   .mobile-player-indicator {
     display: flex;
     align-items: center;
@@ -853,388 +975,63 @@ input:checked + .slider:before {
     position: relative;
   }
   
-  .mobile-player-box.black-active {
-    background: #2C3E50;
-    box-shadow: 0 0 8px rgba(44,62,80,0.6);
-  }
+  .mobile-player-box.black-active { background: #2C3E50; box-shadow: 0 0 8px rgba(44,62,80,0.6); }
+  .mobile-player-box.white-active { background: #ECF0F1; box-shadow: 0 0 8px rgba(236,240,241,0.6); }
   
-  .mobile-player-box.white-active {
-    background: #ECF0F1;
-    box-shadow: 0 0 8px rgba(236,240,241,0.6);
-  }
+  .mobile-player-arrow { font-size: 0.8rem; font-weight: bold; transition: var(--transition); }
+  .mobile-player-arrow.black-turn { color: #2C3E50; text-shadow: 0 0 4px rgba(44,62,80,0.4); }
+  .mobile-player-arrow.white-turn { color: #ECF0F1; text-shadow: 0 0 4px rgba(236,240,241,0.4); }
   
-  .mobile-player-arrow {
-    font-size: 0.8rem;
-    font-weight: bold;
-    transition: var(--transition);
-  }
+  .player-indicator { display: none; }
   
-  .mobile-player-arrow.black-turn {
-    color: #2C3E50;
-    text-shadow: 0 0 4px rgba(44,62,80,0.4);
-  }
+  .score-display { gap: 8px; align-items: center; }
+  .score-item { font-size: 0.85rem; display: flex; align-items: center; gap: 4px; }
+  .score-icon { font-size: 1.1rem; }
   
-  .mobile-player-arrow.white-turn {
-    color: #ECF0F1;
-    text-shadow: 0 0 4px rgba(236,240,241,0.4);
-  }
+  .icon-btn { width: 36px; height: 36px; flex-shrink: 0; font-size: 1.0rem; }
+  .top-controls { gap: 4px; }
   
-  /* Hide original player indicator on mobile */
-  .player-indicator {
-    display: none;
-  }
+  #info-panel, #action-bar { display: none; }
   
-  .score-display {
-    gap: 8px;
-    align-items: center;
-  }
+  .mobile-only { display: block !important; }
   
-  .score-item {
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
+  .mobile-ai-section { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+  .mobile-ai-toggle { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: var(--radius-md); background: rgba(255,255,255,0.5); flex-shrink: 0; }
+  .mobile-switch { transform: scale(0.8); flex-shrink: 0; }
+  #mobile-ai-status-text { font-weight: 700; color: var(--text-primary); font-size: 0.8rem; white-space: nowrap; }
   
-  .score-icon {
-    font-size: 1.1rem;
-  }
+  .mobile-difficulty-selector { display: flex; gap: 3px; flex: 1; min-width: 0; }
+  .mobile-diff-btn { flex: 1; padding: 4px 2px; border: 2px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); font-size: 0.7rem; font-weight: 600; min-height: 32px; min-width: 0; touch-action: manipulation; text-align: center; display: flex; align-items: center; justify-content: center; }
+  .mobile-diff-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+  .mobile-diff-btn:hover:not(.active) { background: var(--bg-secondary); border-color: var(--primary-color); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .mobile-diff-btn:active { transform: translateY(0); }
   
-  .icon-btn {
-    width: 36px;
-    height: 36px;
-    flex-shrink: 0;
-    font-size: 1.0rem;
-  }
+  .mobile-action-row { display: flex; gap: 6px; justify-content: center; }
+  .mobile-action-btn { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); gap: 4px; min-height: 64px; max-width: 64px; font-size: 0.75rem; touch-action: manipulation; }
+  .mobile-action-btn:hover { background: var(--bg-secondary); border-color: var(--primary-color); transform: translateY(-1px); }
+  .mobile-action-btn:active { transform: translateY(0); }
+  .mobile-action-btn .btn-icon { font-size: 1.2rem; line-height: 1; }
+  .mobile-action-btn .btn-text { font-size: 0.7rem; font-weight: 500; line-height: 1; }
   
-  .top-controls {
-    gap: 4px;
-  }
+  .mobile-space-permitting { display: flex !important; flex-direction: column; }
   
-  #info-panel {
-    display: none; /* Hide desktop info panel on mobile */
-  }
-  
-  #action-bar {
-    display: none; /* Hide desktop action bar on mobile to prevent duplicates */
-  }
-  
-  /* Mobile-only controls */
-  .mobile-only {
-    display: block !important;
-  }
-  
-  /* Debug indicator removed - mobile layout working correctly */
-  
-  /* Mobile elements now properly positioned with flex order */
-  
-  /* Main content area for mobile */
-  #game-area {
-    flex: 1;
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 0;
-    position: relative;
-    overflow: hidden;
-  }
-  
-  /* Mobile AI Controls - Compact strip */
-  #mobile-ai-controls {
-    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
-    border-radius: var(--radius-md);
-    padding: 10px 12px;
-    margin: 4px 8px 4px 8px;
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-color);
-    flex-shrink: 0;
-    order: 1;
-    z-index: 10;
-  }
-  
-  /* Board container - Main focus with stable positioning */
-  #board-container {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    margin: 4px 4px 0 4px;
-    padding: 4px;
-    min-height: 0;
-    order: 2;
-    z-index: 5;
-    position: relative;
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    padding-top: 0;
-  }
-  
-  #game-board {
-    /* Remove fixed viewport sizing */
-    /* width: min(75vh, 92vw); */
-    /* height: min(75vh, 92vw); */
-    
-    /* Use dynamic sizing from JavaScript */
-    width: 100%;
-    height: 100%;
-    
-    max-width: 100%;
-    max-height: 100%;
-    min-width: 300px;
-    min-height: 300px;
-    
-    display: flex;
-    flex-direction: column;
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-lg);
-    background: var(--primary-color);
-    padding: 8px;
-    aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
-  }
-  
-  .mobile-ai-section {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    min-width: 0;
-  }
-  
-  .mobile-ai-toggle {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 6px;
-    border-radius: var(--radius-md);
-    background: rgba(255,255,255,0.5);
-    flex-shrink: 0;
-  }
-  
-  .mobile-switch {
-    transform: scale(0.8);
-    flex-shrink: 0;
-  }
-  
-  #mobile-ai-status-text {
-    font-weight: 700;
-    color: var(--text-primary);
-    font-size: 0.8rem;
-    white-space: nowrap;
-  }
-  
-  .mobile-difficulty-selector {
-    display: flex;
-    gap: 3px;
-    flex: 1;
-    min-width: 0;
-  }
-  
-  .mobile-diff-btn {
-    flex: 1;
-    padding: 4px 2px;
-    border: 2px solid var(--border-color);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: var(--transition);
-    font-size: 0.7rem;
-    font-weight: 600;
-    min-height: 32px;
-    min-width: 0;
-    touch-action: manipulation;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  .mobile-diff-btn.active {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-  }
-  
-  .mobile-diff-btn:hover:not(.active) {
-    background: var(--bg-secondary);
-    border-color: var(--primary-color);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
-  }
-  
-  .mobile-diff-btn:active {
-    transform: translateY(0);
-  }
-  
-  /* Mobile Game Info - Allow 30% more height for Recent Moves */
   #mobile-game-info {
-    margin: 4px 8px 8px 8px;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    padding: 6px;
-    box-shadow: var(--shadow-sm);
-    flex: 0 1 auto;
-    order: 3;
-    display: flex;
-    flex-direction: column;
-    min-height: 40px;
-    overflow: hidden;
-  }
-
-  /* Mobile Action Buttons */
-  #mobile-action-buttons {
-    flex-shrink: 0;
-    margin: 8px;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-    padding: 8px;
-    box-shadow: var(--shadow-sm);
-    order: 4;
-    z-index: 10;
+    flex-shrink: 0; /* Ensure it doesn't shrink */
+    overflow-y: auto; /* Allow internal scrolling */
+    margin: 4px 8px;
   }
   
-  .mobile-action-row {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-  }
+  .mobile-stats { display: flex; justify-content: space-around; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+  .mobile-stat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .mobile-stat-label { font-size: 0.65rem; color: var(--text-secondary); font-weight: 500; }
+  .mobile-stat-value { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
   
-  .mobile-action-btn {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 4px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: var(--transition);
-    gap: 4px;
-    min-height: 64px;
-    max-width: 64px;
-    font-size: 0.75rem;
-    touch-action: manipulation;
-  }
+  .mobile-recent-moves { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .mobile-recent-moves h4 { font-size: 0.75rem; margin: 0 0 4px 0; color: var(--text-primary); font-weight: 600; flex-shrink: 0; }
+  #mobile-moves-list { flex: 1; overflow-y: auto; font-size: 0.75rem; min-height: 0; }
+  #mobile-moves-list .move-item { padding: 2px 0; font-size: 0.7rem; }
   
-  .mobile-action-btn:hover {
-    background: var(--bg-secondary);
-    border-color: var(--primary-color);
-    transform: translateY(-1px);
-  }
-  
-  .mobile-action-btn:active {
-    transform: translateY(0);
-  }
-  
-  .mobile-action-btn .btn-icon {
-    font-size: 1.2rem;
-    line-height: 1;
-  }
-  
-  .mobile-action-btn .btn-text {
-    font-size: 0.7rem;
-    font-weight: 500;
-    line-height: 1;
-  }
-  
-  /* Mobile Game Info - Only show if space permits */
-  .mobile-space-permitting {
-    display: none !important; /* Hidden by default on mobile */
-  }
-  
-  /* Show only on larger mobile screens with more vertical space */
-  @media (max-width: 768px) and (min-height: 700px) {
-    .mobile-space-permitting {
-      display: block !important;
-    }
-  }
-  
-  /* Mobile game info styling moved above */
-  
-  .mobile-stats {
-    display: flex;
-    justify-content: space-around;
-    margin-bottom: 6px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-  }
-  
-  .mobile-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-  }
-  
-  .mobile-stat-label {
-    font-size: 0.65rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
-  
-  .mobile-stat-value {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-  
-  .mobile-recent-moves {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-  
-  .mobile-recent-moves h4 {
-    font-size: 0.75rem;
-    margin: 0 0 4px 0;
-    color: var(--text-primary);
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-  
-  #mobile-moves-list {
-    flex: 1;
-    overflow-y: auto;
-    font-size: 0.75rem;
-    min-height: 0;
-  }
-  
-  #mobile-moves-list .move-item {
-    padding: 2px 0;
-    font-size: 0.7rem;
-  }
-  
-
-  
-  #action-bar {
-    padding: 8px 12px;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  
-  .action-group {
-    gap: 4px;
-  }
-  
-  .action-btn {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-  
-  #action-bar .btn-text {
-    display: none;
-  }
-  
-  .slide-panel {
-    width: 100%;
-    max-width: 350px;
-  }
+  .slide-panel { width: 100%; max-width: 350px; }
 }
 
 @media (max-width: 480px) {
@@ -1534,16 +1331,20 @@ input:checked + .slider:before {
 }
 
 /* ===== BOARD SIZE CLASSES ===== */
+/* These classes now work with responsive sizing instead of overriding it */
 .board-small {
   --board-size: 320px;
+  /* On desktop, scale down from responsive size */
 }
 
 .board-medium {
   --board-size: 400px;
+  /* Default responsive sizing */
 }
 
 .board-large {
   --board-size: 480px;
+  /* On desktop, scale up from responsive size */
 }
 
 /* ===== COORDINATE DISPLAY ===== */

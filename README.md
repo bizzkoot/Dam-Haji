@@ -33,6 +33,16 @@ Dam Haji is a traditional Malaysian board game similar to international checkers
 - **Modular Architecture**: Clean, maintainable codebase for future enhancements
 - **Cultural Preservation**: Maintains the essence of traditional Malaysian gaming
 
+### 📸 Game Screenshots
+
+<div align="center">
+  <img src="assets/screenshots/Desktop.png" alt="Desktop Gameplay" width="45%">
+  &nbsp;&nbsp;&nbsp;
+  <img src="assets/screenshots/Mobile.png" alt="Mobile Gameplay" width="30%">
+  <br>
+  <em>Gameplay on desktop and mobile devices</em>
+</div>
+
 ## 🎯 Game Rules
 
 ### Basic Setup

@@ -310,16 +310,9 @@ class GameUIIntegration {
     connectAISystem() {
         // Connect AI toggle - ensure both old and new systems work
         window.toggleAI = (enabled) => {
-            // Update global variable in script.js scope
-            if (typeof window.aiEnabled !== 'undefined') {
-                window.aiEnabled = enabled;
-            }
-            // Also update in global scope
-            try {
-                window.eval('aiEnabled = ' + enabled);
-            } catch (e) {
-                console.error('Error setting global aiEnabled in toggleAI:', e);
-            }
+            // Update global variable directly
+            window.aiEnabled = enabled;
+            aiEnabled = enabled; // Also update in current scope if different
             
             // Don't call updateAIDisplay here to prevent cascade
             // updateAIDisplay();
@@ -352,16 +345,9 @@ class GameUIIntegration {
 
         // Connect difficulty setting
         window.setAIDifficulty = (level) => {
-            // Update global variable in script.js scope
-            if (typeof window.aiDifficulty !== 'undefined') {
-                window.aiDifficulty = level;
-            }
-            // Also update in global scope
-            try {
-                window.eval('aiDifficulty = "' + level + '"');
-            } catch (e) {
-                console.error('Error setting global aiDifficulty:', e);
-            }
+            // Update global variable directly
+            window.aiDifficulty = level;
+            aiDifficulty = level; // Also update in current scope if different
             
             // Don't call updateAIDisplay here to prevent cascade
             // updateAIDisplay();

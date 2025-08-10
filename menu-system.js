@@ -314,7 +314,8 @@ class MenuSystem {
 }
 
 // Global instance
-window.menuSystem = new MenuSystem();
+// window.menuSystem = new MenuSystem();
+// console.log("MenuSystem disabled to prevent conflict with ModernUI");
 
 // Export for module use
 if (typeof module !== 'undefined' && module.exports) {

@@ -1089,7 +1089,11 @@ function executeMove(move) {
 }
 
 function handleClick(event) {
-    if (aiEnabled && currentPlayer === aiPlayer) return;
+    // Prevent human moves when it's AI's turn
+    if (aiEnabled && currentPlayer === aiPlayer) {
+        showNotification("It's AI's turn!", "warning");
+        return;
+    }
 
     const square = event.currentTarget;
     const row = parseInt(square.dataset.row);
@@ -1113,7 +1117,7 @@ function handleClick(event) {
         if (isCapture || isRegular) {
             executeMove({ piece: selectedPiece, startRow, startCol, endRow: row, endCol: col, isCapture });
         } else {
-            alert(mustCapture ? "You must capture when possible!" : "Invalid move!");
+            showNotification(mustCapture ? "You must capture when possible!" : "Invalid move!", "error");
             selectedPiece = null;
             clearHighlights();
         }
@@ -1128,11 +1132,13 @@ function handleClick(event) {
 }
 
 function makeAIMove() {
-    if (!aiEnabled || currentPlayer !== aiPlayer) return;
+    if (!aiEnabled || currentPlayer !== aiPlayer) {
+        return;
+    }
     
     // Prevent multiple simultaneous AI moves
     if (window.aiThinking) {
-        return; // Simplified - no debug logging
+        return;
     }
     
     window.aiThinking = true;
@@ -1154,7 +1160,11 @@ function makeAIMove() {
 
         if (bestMove) {
             const piece = getPiece(bestMove.startRow, bestMove.startCol);
-            executeMove({ ...bestMove, piece });
+            if (piece) {
+                executeMove({ ...bestMove, piece });
+            } else {
+                console.error('No piece found at start position', bestMove.startRow, bestMove.startCol);
+            }
         } else {
             // AI has no moves, check win condition
             checkWinCondition();
@@ -1258,6 +1268,7 @@ window.addEventListener('load', () => {
     document.getElementById('reset-game-btn').addEventListener('click', resetGame);
     document.getElementById('ai-toggle').addEventListener('click', () => {
         aiEnabled = !aiEnabled;
+        window.aiEnabled = aiEnabled; // Also update global variable
         updateAIDisplay();
         if (aiEnabled && currentPlayer === aiPlayer) {
             // Clear any pending AI moves and reset flags

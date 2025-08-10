@@ -388,3 +388,37 @@ Ensure elements appear in correct vertical order:
 4. **Long-term**: Document mobile layout best practices
 
 This analysis provides the foundation for systematic restoration of the mobile-conscious UI layout system. The primary issue is a simple CSS selector mismatch that can be fixed immediately.
+
+---
+## **UPDATE**: Post-Implementation Analysis & Final Solution
+
+Following the initial analysis, several attempts were made to fix the mobile layout. This section documents the iterative process and the final, successful solution.
+
+### Attempt 1: Advanced Flexbox Layout
+
+-   **Action Taken**: A Flexbox-based layout was implemented to manage the vertical stacking of UI components.
+-   **Result**: **FAILURE**. Caused overlapping elements and instability when the mobile browser's UI appeared.
+
+### Attempt 2: CSS Grid Layout & JavaScript Neutralization
+
+-   **Action Taken**: Refactored to a more rigid CSS Grid layout and disabled JavaScript-based board resizing in `ui-v2.js`.
+-   **Result**: **FAILURE**. Introduced horizontal overflow and a critical bug where the board's aspect ratio would distort during gameplay.
+
+### Attempt 3 (Successful): Hybrid CSS + JavaScript Solution
+
+The final and successful approach acknowledged that a pure CSS solution was insufficient due to the dynamic nature of the "Recent Moves" panel. A hybrid solution was required.
+
+-   **Root Cause Identified**: The board's aspect ratio was breaking because as the "Recent Moves" panel grew with new content, it would steal vertical space from the board's flexible container, causing it to squash.
+
+-   **Final Actions Taken**:
+    1.  **CSS Foundation**: A robust vertical Flexbox layout was established. The key was making the `#board-container` the primary flexible element (`flex: 1`) to ensure it always filled the available space, while all other UI elements had fixed, non-flexible heights (`flex-shrink: 0`).
+    2.  **JavaScript Control**: A new "layout engine" was implemented in `ui-v2.js`. A function named `setStaticMobileLayout` now runs once on page load and on any window resize.
+    3.  **Dynamic Calculation**: This function measures the viewport height and the heights of all static UI elements (Header, AI Bar, Action Bar, and the square Game Board).
+    4.  **Static Height Injection**: It calculates the remaining vertical space and injects it as a fixed pixel height (`style.height`) into the `#mobile-game-info` panel.
+
+-   **Result**: **SUCCESS**. This approach creates a perfectly stable layout.
+    -   On load, the layout is perfectly balanced and fills the screen.
+    -   The board's aspect ratio is permanently maintained because the heights of all surrounding elements are now fixed.
+    -   The only quirk, as intended, is that if the list of moves in the "Recent Moves" panel exceeds its calculated fixed height, the panel's internal scrollbar (`overflow-y: auto`) becomes active, preventing any layout shifts.
+
+This hybrid solution has resolved all identified issues, providing a stable, predictable, and fully functional mobile user experience.
