@@ -913,7 +913,7 @@ function updateScore() {
 }
 
 function updateAIDisplay(isThinking = false) {
-    const aiStatus = document.getElementById('ai-status');
+    const aiStatus = document.getElementById('ai-status-text');
     const aiDifficultyDisplay = document.getElementById('ai-difficulty');
     const aiToggleBtn = document.getElementById('ai-toggle');
 
@@ -925,6 +925,7 @@ function updateAIDisplay(isThinking = false) {
             aiStatus.textContent = aiEnabled ? "AI: ON" : "AI: OFF";
             aiStatus.classList.remove('ai-thinking');
         }
+        // Note: These classes may not be used in the new UI
         aiStatus.classList.toggle('ai-on', aiEnabled && !isThinking);
         aiStatus.classList.toggle('ai-off', !aiEnabled);
     }

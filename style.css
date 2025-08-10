@@ -510,6 +510,35 @@ input:checked + .slider:before {
   color: var(--text-primary);
 }
 
+/* AI Thinking Indicator */
+#ai-status-text.ai-thinking {
+  color: var(--warning-color) !important;
+  animation: ai-thinking-pulse 1.5s infinite;
+}
+
+#ai-status-text.ai-thinking::after {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: ai-thinking-spin 1s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes ai-thinking-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes ai-thinking-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 /* Difficulty Selector */
 .difficulty-selector {
   display: flex;
@@ -999,6 +1028,25 @@ input:checked + .slider:before {
   .mobile-ai-toggle { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: var(--radius-md); background: rgba(255,255,255,0.5); flex-shrink: 0; }
   .mobile-switch { transform: scale(0.8); flex-shrink: 0; }
   #mobile-ai-status-text { font-weight: 700; color: var(--text-primary); font-size: 0.8rem; white-space: nowrap; }
+
+/* Mobile AI Thinking Indicator */
+#mobile-ai-status-text.ai-thinking {
+  color: var(--warning-color) !important;
+  animation: ai-thinking-pulse 1.5s infinite;
+}
+
+#mobile-ai-status-text.ai-thinking::after {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 6px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: ai-thinking-spin 1s linear infinite;
+  vertical-align: middle;
+}
   
   .mobile-difficulty-selector { display: flex; gap: 3px; flex: 1; min-width: 0; }
   .mobile-diff-btn { flex: 1; padding: 4px 2px; border: 2px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); border-radius: var(--radius-sm); cursor: pointer; transition: var(--transition); font-size: 0.7rem; font-weight: 600; min-height: 32px; min-width: 0; touch-action: manipulation; text-align: center; display: flex; align-items: center; justify-content: center; }
