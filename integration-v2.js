@@ -123,13 +123,27 @@ class GameUIIntegration {
                     }
                 }
                 
-                // Update V2 UI AI status
+                // Update V2 UI AI status for both desktop and mobile
                 const aiStatusText = document.getElementById('ai-status-text');
+                const mobileAiStatusText = document.getElementById('mobile-ai-status-text');
+                
                 if (aiStatusText) {
                     if (actualIsThinking) {
                         aiStatusText.textContent = 'AI Thinking...';
+                        aiStatusText.classList.add('ai-thinking');
                     } else {
                         aiStatusText.textContent = actualAiEnabled ? 'AI On' : 'AI Off';
+                        aiStatusText.classList.remove('ai-thinking');
+                    }
+                }
+                
+                if (mobileAiStatusText) {
+                    if (actualIsThinking) {
+                        mobileAiStatusText.textContent = 'AI Thinking...';
+                        mobileAiStatusText.classList.add('ai-thinking');
+                    } else {
+                        mobileAiStatusText.textContent = actualAiEnabled ? 'AI On' : 'AI Off';
+                        mobileAiStatusText.classList.remove('ai-thinking');
                     }
                 }
                 

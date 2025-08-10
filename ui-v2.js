@@ -207,7 +207,9 @@ class ModernUI {
 
     toggleAI(enabled) {
         const statusText = document.getElementById('ai-status-text');
+        const mobileStatusText = document.getElementById('mobile-ai-status-text');
         if (statusText) statusText.textContent = enabled ? 'AI On' : 'AI Off';
+        if (mobileStatusText) mobileStatusText.textContent = enabled ? 'AI On' : 'AI Off';
         document.querySelectorAll('.diff-btn').forEach(btn => {
             btn.disabled = !enabled;
             btn.style.opacity = enabled ? '1' : '0.5';
