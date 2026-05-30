@@ -1,4 +1,4 @@
-const cacheName = 'dam-haji-cache-v2';
+const cacheName = 'dam-haji-cache-v3';
 const staticAssets = [
   'index.html',
   'style.css',
