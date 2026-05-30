@@ -7,7 +7,7 @@ class MenuSystem {
     constructor() {
         this.activePanel = null;
         this.overlay = document.getElementById('overlay');
-        
+
         this.initializeEventListeners();
         this.initializePanels();
     }
@@ -95,11 +95,11 @@ class MenuSystem {
         // Show overlay
         this.overlay?.classList.remove('hidden');
         this.overlay?.classList.add('active');
-        
+
         // Show panel with animation
         panel.classList.remove('hidden');
         panel.style.display = 'block';
-        
+
         // Trigger slide-in animation (CSS will handle this)
         requestAnimationFrame(() => {
             panel.classList.add('slide-in');
@@ -157,7 +157,7 @@ class MenuSystem {
     setupMenuActions() {
         // Get all menu items and attach event listeners
         const menuItems = document.querySelectorAll('#menu-panel .menu-item');
-        
+
         menuItems.forEach(item => {
             // Remove existing listeners to prevent duplicates
             item.replaceWith(item.cloneNode(true));
@@ -165,10 +165,10 @@ class MenuSystem {
 
         // Re-select after cloning
         const refreshedMenuItems = document.querySelectorAll('#menu-panel .menu-item');
-        
+
         refreshedMenuItems.forEach(item => {
             const text = item.textContent.trim();
-            
+
             item.addEventListener('click', () => {
                 this.handleMenuAction(text);
                 this.closePanel('menu-panel');
@@ -186,7 +186,7 @@ class MenuSystem {
                     }
                 }
                 break;
-                
+
             case 'Save Game':
                 if (typeof window.openSaveLoadModal === 'function') {
                     window.openSaveLoadModal('save');
@@ -194,7 +194,7 @@ class MenuSystem {
                     this.showNotification('Save functionality not available', 'error');
                 }
                 break;
-                
+
             case 'Load Game':
                 if (typeof window.openSaveLoadModal === 'function') {
                     window.openSaveLoadModal('load');
@@ -202,19 +202,19 @@ class MenuSystem {
                     this.showNotification('Load functionality not available', 'error');
                 }
                 break;
-                
+
             case 'Board Theme':
-                this.showNotification('Theme settings coming soon!', 'info');
+                this.togglePanel('settings-panel');
                 break;
-                
+
             case 'Sound Effects':
-                this.showNotification('Sound settings coming soon!', 'info');
+                this.togglePanel('settings-panel');
                 break;
-                
+
             case 'Animations':
-                this.showNotification('Animation settings coming soon!', 'info');
+                this.togglePanel('settings-panel');
                 break;
-                
+
             default:
                 console.log('Unknown menu action:', action);
         }
@@ -229,7 +229,7 @@ class MenuSystem {
 
         // Get move history from game
         const moveHistory = window.moveHistory || [];
-        
+
         if (moveHistory.length === 0) {
             historyList.innerHTML = '<div class="no-history">No moves yet</div>';
             return;
@@ -239,11 +239,11 @@ class MenuSystem {
         moveHistory.forEach((move, index) => {
             const moveEntry = document.createElement('div');
             moveEntry.className = 'history-entry';
-            
+
             const playerClass = move.player === 'B' ? 'black' : 'white';
             // Each move gets its own sequential number
             const moveNumber = index + 1;
-            
+
             moveEntry.innerHTML = `
                 <div class="move-number ${playerClass}">
                     ${moveNumber}.
@@ -264,15 +264,15 @@ class MenuSystem {
         // Scroll to bottom
         historyList.scrollTop = historyList.scrollHeight;
     }
-    
+
     generateMoveNotation(move) {
         if (!move) return '';
-        
+
         // Convert row/col numbers to chess notation (A1, B2, etc.)
         const colLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
         const from = `${colLabels[move.startCol]}${move.startRow + 1}`;
         const to = `${colLabels[move.endCol]}${move.endRow + 1}`;
-        
+
         return `${from} → ${to}`;
     }
 
@@ -283,7 +283,7 @@ class MenuSystem {
         if (settingsPanel) {
             settingsPanel.classList.add('settings-ready');
         }
-        
+
         // Trigger settings system to refresh if available
         if (window.settingsSystem?.refreshSettingsDisplay) {
             window.settingsSystem.refreshSettingsDisplay();

@@ -37,6 +37,30 @@ class SettingsSystem {
             });
         }
 
+        // Board theme selector
+        const boardThemeSelect = document.getElementById('board-theme');
+        if (boardThemeSelect) {
+            boardThemeSelect.addEventListener('change', (e) => {
+                this.updateSetting('boardTheme', e.target.value);
+            });
+        }
+
+        // Sound effects toggle
+        const soundToggle = document.getElementById('sound-toggle');
+        if (soundToggle) {
+            soundToggle.addEventListener('change', (e) => {
+                this.updateSetting('soundEffects', e.target.checked);
+            });
+        }
+
+        // Animations toggle
+        const animationsToggle = document.getElementById('animations-toggle');
+        if (animationsToggle) {
+            animationsToggle.addEventListener('change', (e) => {
+                this.updateSetting('animations', e.target.checked);
+            });
+        }
+
         // Listen for settings panel opens to refresh display
         document.addEventListener('panelOpened', (e) => {
             if (e.detail.panelId === 'settings-panel') {
@@ -67,10 +91,10 @@ class SettingsSystem {
     updateSetting(key, value) {
         const oldValue = this.settings[key];
         this.settings[key] = value;
-        
+
         // Apply the setting immediately
         this.applySetting(key, value);
-        
+
         // Save to localStorage
         this.saveSettings();
 
@@ -117,7 +141,7 @@ class SettingsSystem {
 
         // Remove existing size classes
         gameBoard.classList.remove('board-small', 'board-medium', 'board-large');
-        
+
         // Add new size class
         gameBoard.classList.add(`board-${size}`);
 
@@ -192,10 +216,10 @@ class SettingsSystem {
 
     applyBoardTheme(theme) {
         const body = document.body;
-        
+
         // Remove existing theme classes
         body.classList.remove('theme-classic', 'theme-modern', 'theme-dark');
-        
+
         // Add new theme class
         body.classList.add(`theme-${theme}`);
     }
@@ -203,7 +227,7 @@ class SettingsSystem {
     applySoundEffects(enabled) {
         // Store sound setting for game logic to use
         window.soundEffectsEnabled = enabled;
-        
+
         // Dispatch event for sound system
         document.dispatchEvent(new CustomEvent('soundSettingChanged', {
             detail: { enabled }
@@ -212,7 +236,7 @@ class SettingsSystem {
 
     applyAnimations(enabled) {
         const body = document.body;
-        
+
         if (enabled) {
             body.classList.remove('no-animations');
         } else {
@@ -231,6 +255,24 @@ class SettingsSystem {
         const showCoordsToggle = document.getElementById('show-coords');
         if (showCoordsToggle) {
             showCoordsToggle.checked = this.settings.showCoordinates;
+        }
+
+        // Update board theme selector
+        const boardThemeSelect = document.getElementById('board-theme');
+        if (boardThemeSelect) {
+            boardThemeSelect.value = this.settings.boardTheme;
+        }
+
+        // Update sound effects toggle
+        const soundToggle = document.getElementById('sound-toggle');
+        if (soundToggle) {
+            soundToggle.checked = this.settings.soundEffects;
+        }
+
+        // Update animations toggle
+        const animationsToggle = document.getElementById('animations-toggle');
+        if (animationsToggle) {
+            animationsToggle.checked = this.settings.animations;
         }
     }
 
@@ -285,12 +327,12 @@ class SettingsSystem {
             const settingsJson = JSON.stringify(this.settings, null, 2);
             const blob = new Blob([settingsJson], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement('a');
             a.href = url;
             a.download = 'dam-haji-settings.json';
             a.click();
-            
+
             URL.revokeObjectURL(url);
             this.showNotification('Settings exported', 'success');
         } catch (error) {
