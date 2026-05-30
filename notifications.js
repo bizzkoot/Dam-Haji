@@ -33,7 +33,7 @@ class NotificationSystem {
             style.textContent = `
                 .notification-container {
                     position: fixed;
-                    top: 80px;
+                    top: var(--notification-top, 80px);
                     right: 20px;
                     z-index: 10010;
                     pointer-events: none;
@@ -154,7 +154,7 @@ class NotificationSystem {
                     .notification-container {
                         left: 20px;
                         right: 20px;
-                        top: 70px;
+                        top: var(--notification-top-mobile, 60px);
                     }
 
                     .notification {

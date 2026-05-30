@@ -137,7 +137,11 @@ class ModernUI {
         if (!panel) return;
         panel.element.classList.add('active');
         panel.isOpen = true;
-        document.getElementById('overlay').classList.add('active');
+        const overlay = document.getElementById('overlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+            overlay.classList.add('active');
+        }
         document.body.style.overflow = 'hidden';
     }
 
@@ -148,7 +152,11 @@ class ModernUI {
         panel.isOpen = false;
         const anyOpen = Array.from(this.panels.values()).some(p => p.isOpen);
         if (!anyOpen) {
-            document.getElementById('overlay').classList.remove('active');
+            const overlay = document.getElementById('overlay');
+            if (overlay) {
+                overlay.classList.remove('active');
+                overlay.classList.add('hidden');
+            }
             document.body.style.overflow = '';
         }
     }
@@ -247,6 +255,9 @@ class ModernUI {
     }
 
     showNotification(message, type = 'info') {
+        if (window.notificationSystem) {
+            return window.notificationSystem.show(message, type);
+        }
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;

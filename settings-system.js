@@ -12,7 +12,8 @@ class SettingsSystem {
             soundEffects: true,
             animations: true,
             aiEnabled: false,
-            aiDifficulty: 'medium'
+            aiDifficulty: 'medium',
+            showDebugButton: false
         };
 
         this.loadSettings();
@@ -58,6 +59,14 @@ class SettingsSystem {
         if (animationsToggle) {
             animationsToggle.addEventListener('change', (e) => {
                 this.updateSetting('animations', e.target.checked);
+            });
+        }
+
+        // Debug toggle
+        const debugToggle = document.getElementById('debug-toggle');
+        if (debugToggle) {
+            debugToggle.addEventListener('change', (e) => {
+                this.updateSetting('showDebugButton', e.target.checked);
             });
         }
 
@@ -123,6 +132,9 @@ class SettingsSystem {
                 break;
             case 'animations':
                 this.applyAnimations(value);
+                break;
+            case 'showDebugButton':
+                this.applyShowDebugButton(value);
                 break;
         }
     }
@@ -196,6 +208,13 @@ class SettingsSystem {
         }
     }
 
+    applyShowDebugButton(show) {
+        const debugBtn = document.getElementById('debug-main-btn');
+        if (debugBtn) {
+            debugBtn.style.display = show ? 'block' : 'none';
+        }
+    }
+
     refreshSettingsDisplay() {
         // Update board size selector
         const boardSizeSelect = document.getElementById('board-size');
@@ -226,6 +245,12 @@ class SettingsSystem {
         if (animationsToggle) {
             animationsToggle.checked = this.settings.animations;
         }
+
+        // Update debug toggle
+        const debugToggle = document.getElementById('debug-toggle');
+        if (debugToggle) {
+            debugToggle.checked = this.settings.showDebugButton || false;
+        }
     }
 
     getSettingDisplayName(key) {
@@ -234,7 +259,8 @@ class SettingsSystem {
             showCoordinates: 'Show Coordinates',
             boardTheme: 'Board Theme',
             soundEffects: 'Sound Effects',
-            animations: 'Animations'
+            animations: 'Animations',
+            showDebugButton: 'Show Debug Button'
         };
         return displayNames[key] || key;
     }
@@ -265,7 +291,8 @@ class SettingsSystem {
             soundEffects: true,
             animations: true,
             aiEnabled: false,
-            aiDifficulty: 'medium'
+            aiDifficulty: 'medium',
+            showDebugButton: false
         };
 
         this.settings = { ...defaultSettings };

@@ -611,6 +611,9 @@ function cleanupDragState() {
 }
 
 function showNotification(message, type = 'info') {
+    if (window.notificationSystem) {
+        return window.notificationSystem.show(message, type);
+    }
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.textContent = message;
@@ -743,9 +746,6 @@ function openSaveLoadModal(defaultTab = 'save') {
         // Clear all active states first
         tabBtns.forEach(btn => {
             btn.classList.remove('active');
-            // Reset inline styles that might override CSS
-            btn.style.color = '#666';
-            btn.style.borderBottom = 'none';
         });
         tabContents.forEach(content => {
             content.classList.remove('active');
@@ -758,9 +758,6 @@ function openSaveLoadModal(defaultTab = 'save') {
         
         if (targetTabBtn && targetTabContent) {
             targetTabBtn.classList.add('active');
-            // Apply inline styles to ensure visibility over existing inline styles
-            targetTabBtn.style.color = '#8B4513';
-            targetTabBtn.style.borderBottom = '3px solid #8B4513';
             
             targetTabContent.classList.add('active');
             targetTabContent.style.display = 'block';
@@ -854,14 +851,8 @@ function initializePhase1Features() {
             // Update active tab button
             tabBtns.forEach(b => {
                 b.classList.remove('active');
-                // Reset inline styles
-                b.style.color = '#666';
-                b.style.borderBottom = 'none';
             });
             btn.classList.add('active');
-            // Apply inline styles to ensure visibility
-            btn.style.color = '#8B4513';
-            btn.style.borderBottom = '3px solid #8B4513';
             
             // Update active tab content
             tabContents.forEach(content => {
@@ -1370,11 +1361,12 @@ window.addEventListener('load', () => {
 
 // Debug function to set up a Haji capture test scenario
 const captureScenario = {
+    // Purpose: Simple regular piece capture test.
     initialBoard: [
-        { row: 2, col: 1, color: 'black', isHaji: false }, // Black piece
-        { row: 3, col: 2, color: 'white', isHaji: false }, // White piece to be captured
-        { row: 0, col: 0, color: 'black', isHaji: false }, // Placeholder
-        { row: 7, col: 7, color: 'white', isHaji: false }  // Placeholder
+        { row: 2, col: 1, color: 'black', isHaji: false }, // Black piece at (2,1)
+        { row: 3, col: 2, color: 'white', isHaji: false }, // White piece at (3,2) to be captured
+        { row: 0, col: 1, color: 'black', isHaji: false }, // Placeholder black on dark cell
+        { row: 7, col: 6, color: 'white', isHaji: false }  // Placeholder white on dark cell
     ],
     startingPlayer: 'B',
     moves: [
@@ -1386,49 +1378,40 @@ const captureScenario = {
 const hajiCaptureScenario = {
     // Purpose: Validate Haji long-distance capture over a single opponent piece with clear landing.
     initialBoard: [
-        { row: 2, col: 3, color: 'black', isHaji: true },   // Black Haji at [2,3]
-        { row: 3, col: 4, color: 'white', isHaji: false },  // White at [3,4] (to be captured)
-        // Ensure landing (4,5) is empty prior to capture
-        { row: 1, col: 2, color: 'black', isHaji: false },  // Extra pieces for board realism
-        { row: 6, col: 5, color: 'white', isHaji: false }   // Distant white that should not interfere
+        { row: 0, col: 1, color: 'black', isHaji: true },   // Black Haji at (0,1)
+        { row: 4, col: 5, color: 'white', isHaji: false },  // White at (4,5) to be captured
+        { row: 7, col: 6, color: 'white', isHaji: false }   // Placeholder white to prevent game end
     ],
     startingPlayer: 'B',
     moves: [
-        { startRow: 2, startCol: 3, endRow: 4, endCol: 5 } // Haji captures white at (3,4) landing at (4,5)
+        { startRow: 0, startCol: 1, endRow: 6, endCol: 7 } // Haji slides to capture at (4,5) landing at (6,7)
     ]
 };
 
 // Define a scenario for testing win animations
 const winAnimationScenario = {
     // Purpose: Simple scenario that results in Black winning by capturing all White pieces
-    // This scenario sets up a board where Black can win in one move by capturing the last White piece
     initialBoard: [
         { row: 2, col: 1, color: 'black', isHaji: false },  // Black piece
-        { row: 3, col: 2, color: 'white', isHaji: false },  // White piece to be captured (last white piece)
-        { row: 5, col: 4, color: 'black', isHaji: false },  // Another black piece
-        { row: 6, col: 5, color: 'black', isHaji: false }   // Another black piece
+        { row: 3, col: 2, color: 'white', isHaji: false }   // Last white piece
     ],
     startingPlayer: 'B',
     moves: [
-        { startRow: 2, startCol: 1, endRow: 4, endCol: 3 }  // Black captures white (this should win)
+        { startRow: 2, startCol: 1, endRow: 4, endCol: 3 }  // Black captures white (this wins)
     ]
 };
 
 // Define a scenario for testing end-game conditions
 const endGameScenario = {
-    // Goal: After the Haji capture, allow a legal black capture from (4,1) over a white at (5,2) landing on empty (6,3).
+    // Purpose: Test stalemate endgame condition. Black moves to block White's last piece, ending the game.
     initialBoard: [
-        { row: 2, col: 3, color: 'black', isHaji: true },  // Black Haji
-        { row: 4, col: 1, color: 'black', isHaji: false }, // Black regular (to move second)
-        { row: 5, col: 2, color: 'white', isHaji: false }, // White regular at (5,2) to be captured
-        { row: 3, col: 4, color: 'white', isHaji: false }, // White regular to be captured by Haji
-        { row: 2, col: 1, color: 'white', isHaji: false }  // Another white regular
-        // Note: Ensure (6,3) is empty for the landing square
+        { row: 7, col: 6, color: 'white', isHaji: false },  // White piece in corner
+        { row: 6, col: 7, color: 'black', isHaji: false },  // Black piece blocking one side
+        { row: 5, col: 4, color: 'black', isHaji: false }   // Black piece ready to block the other side
     ],
     startingPlayer: 'B',
     moves: [
-        { startRow: 2, startCol: 3, endRow: 4, endCol: 5 }, // Black Haji captures White at (3,4)
-        { startRow: 4, startCol: 1, endRow: 6, endCol: 3 }  // Black regular captures White at (5,2)
+        { startRow: 5, startCol: 4, endRow: 6, endCol: 5 }  // Black blocks White's last move
     ]
 };
 
@@ -1449,7 +1432,7 @@ function testWinAnimationDirect(winner = 'Black') {
 function testIterativeDeepening() {
     const testBoard = buildBoardFromDOM();
     const startTime = Date.now();
-    const move = iterativeDeepening(testBoard, 'B', 'medium', 'B', 2000);
+    const move = iterativeDeepeningSync(testBoard, 'B', 'medium', 'B', 2000);
     const endTime = Date.now();
     
     console.assert(endTime - startTime <= 2500, 'Time limit exceeded');
@@ -1555,6 +1538,16 @@ function setupAndPlayScenario(scenarioConfig) {
     console.log("--- Setting up and playing scenario ---");
     detailedDebugLoggingEnabled = true;
     
+    // Temporarily disable AI to prevent it from interfering with scenario moves
+    const originalAIEnabled = aiEnabled;
+    aiEnabled = false;
+    window.aiEnabled = false;
+    if (window.aiMoveTimeout) {
+        clearTimeout(window.aiMoveTimeout);
+    }
+    window.aiThinking = false;
+    updateAIDisplay();
+    
     // Reset game to a clean state
     resetGame();
 
@@ -1594,6 +1587,16 @@ function setupAndPlayScenario(scenarioConfig) {
     updateCurrentPlayerDisplay();
     console.log(`[DEBUG] Board setup complete. ${currentPlayer === 'B' ? 'Black' : 'White'} to move.`);
 
+    // Helper to clean up AI settings on completion or error
+    const restoreAISettings = () => {
+        aiEnabled = originalAIEnabled;
+        window.aiEnabled = originalAIEnabled;
+        updateAIDisplay();
+        if (aiEnabled && currentPlayer === aiPlayer) {
+            window.aiMoveTimeout = setTimeout(makeAIMove, 500);
+        }
+    };
+
     // Execute moves sequentially
     let moveIndex = 0;
     const executeNextMove = () => {
@@ -1605,52 +1608,59 @@ function setupAndPlayScenario(scenarioConfig) {
             const pieceToMove = startCell ? startCell.firstChild : null;
 
             if (pieceToMove && (pieceToMove.classList.contains('black') ? 'B' : 'W') === currentPlayer) {
-                // Simulate selecting the piece
+                // Simulate selecting the piece (visually highlight it first)
                 selectedPiece = pieceToMove;
                 startCell.classList.add("selected");
                 highlightAvailableMoves(pieceToMove);
 
-                // Simulate moving the piece
-                const targetCell = document.querySelector(`[data-row="${move.endRow}"][data-col="${move.endCol}"]`);
-                if (targetCell) {
-                    // Directly call handleClick's logic for the second click
-                    const startRow = parseInt(startCell.dataset.row);
-                    const startCol = parseInt(startCell.dataset.col);
-                    const endRow = parseInt(targetCell.dataset.row);
-                    const endCol = parseInt(targetCell.dataset.col);
+                // Wait 800ms so the user can visually observe the selection and available moves
+                setTimeout(() => {
+                    const targetCell = document.querySelector(`[data-row="${move.endRow}"][data-col="${move.endCol}"]`);
+                    if (targetCell) {
+                        const startRow = parseInt(startCell.dataset.row);
+                        const startCol = parseInt(startCell.dataset.col);
+                        const endRow = parseInt(targetCell.dataset.row);
+                        const endCol = parseInt(targetCell.dataset.col);
 
-                    const mustCapture = checkAvailableCaptures(currentPlayer);
-                    const isCapture = isValidCapture(startRow, startCol, endRow, endCol);
-                    const isRegular = !mustCapture && isValidMove(startRow, startCol, endRow, endCol);
+                        const mustCapture = checkAvailableCaptures(currentPlayer);
+                        const isCapture = isValidCapture(startRow, startCol, endRow, endCol);
+                        const isRegular = !mustCapture && isValidMove(startRow, startCol, endRow, endCol);
 
-                    if (isCapture || isRegular) {
-                        executeMove({
-                            piece: selectedPiece,
-                            startRow,
-                            startCol,
-                            endRow,
-                            endCol,
-                            isCapture
-                        });
+                        if (isCapture || isRegular) {
+                            executeMove({
+                                piece: selectedPiece,
+                                startRow,
+                                startCol,
+                                endRow,
+                                endCol,
+                                isCapture
+                            });
+                            
+                            // Move index increment and queue next move *after* execution
+                            moveIndex++;
+                            setTimeout(executeNextMove, 1000); // 1s delay before the next move starts
+                        } else {
+                            console.error(`[DEBUG ERROR] Invalid move in scenario: ${JSON.stringify(move)}`);
+                            alert("Invalid move in scenario!");
+                            selectedPiece = null;
+                            clearHighlights();
+                            restoreAISettings();
+                        }
                     } else {
-                        console.error(`[DEBUG ERROR] Invalid move in scenario: ${JSON.stringify(move)}`);
-                        alert("Invalid move in scenario!");
-                        selectedPiece = null;
-                        clearHighlights();
+                        console.error(`[DEBUG ERROR] Target cell not found for move: ${JSON.stringify(move)}`);
+                        alert("Invalid cell in scenario!");
+                        restoreAISettings();
                     }
-                } else {
-                    console.error(`[DEBUG ERROR] Target cell not found for move: ${JSON.stringify(move)}`);
-                }
+                }, 800);
             } else {
                 console.error(`[DEBUG ERROR] Piece not found or wrong player for move: ${JSON.stringify(move)}`);
+                alert("Invalid starting piece in scenario!");
+                restoreAISettings();
             }
-
-            moveIndex++;
-            // Use a small delay to observe each step, especially if AI is involved
-            setTimeout(executeNextMove, 700); // Adjust delay as needed
         } else {
             console.log("--- Scenario playback complete. Check console for detailed logs. ---");
             detailedDebugLoggingEnabled = false;
+            restoreAISettings();
         }
     };
 

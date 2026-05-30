@@ -20,6 +20,8 @@
   --text-primary: #2C3E50;
   --text-secondary: #6C757D;
   --text-muted: #ADB5BD;
+  --notification-top: 80px;
+  --notification-top-mobile: 60px;
   
   --border-color: #DEE2E6;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
@@ -338,18 +340,18 @@ body {
 }
 
 /* When info panel is collapsed, maximize board size */
-#info-panel.collapsed ~ #board-container #game-board {
+#game-area:has(#info-panel.collapsed) #board-container #game-board {
   width: min(80vh, calc(100vw - 100px - 40px));
   height: min(80vh, calc(100vw - 100px - 40px));
 }
 
 /* Board size classes modify the collapsed panel sizing */
-#info-panel.collapsed ~ #board-container #game-board.board-small {
+#game-area:has(#info-panel.collapsed) #board-container #game-board.board-small {
   width: min(70vh, calc(100vw - 100px - 40px));
   height: min(70vh, calc(100vw - 100px - 40px));
 }
 
-#info-panel.collapsed ~ #board-container #game-board.board-large {
+#game-area:has(#info-panel.collapsed) #board-container #game-board.board-large {
   width: min(90vh, calc(100vw - 100px - 40px));
   height: min(90vh, calc(100vw - 100px - 40px));
 }
@@ -976,8 +978,12 @@ input:checked + .slider:before {
   
   #game-board {
     /* Let the size be determined by the container */
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-width: 90%; /* Default medium size */
+    max-height: 90%;
     display: flex;
     flex-direction: column;
     border-radius: var(--radius-lg);
@@ -986,6 +992,33 @@ input:checked + .slider:before {
     background: var(--board-border, var(--primary-color));
     padding: 8px;
     aspect-ratio: 1 / 1;
+  }
+
+  #game-board.board-small {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-width: 80%;
+    max-height: 80%;
+  }
+
+  #game-board.board-medium {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-width: 90%;
+    max-height: 90%;
+  }
+
+  #game-board.board-large {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
   }
   
   #top-nav h1 {
@@ -1596,34 +1629,217 @@ input:checked + .slider:before {
   --nav-bg: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
   --nav-text: #FFFFFF;
   --text-on-primary: #FFFFFF;
+  --text-muted: #8E9CA8;
   --piece-border: rgba(0,0,0,0.3);
 }
 
 .theme-modern {
-  --primary-color: #0d9488;      /* Modern Teal-600 */
-  --primary-light: #14b8a6;      /* Teal-500 */
-  --primary-dark: #0f766e;       /* Teal-700 */
-  --body-bg: linear-gradient(135deg, #042f2e 0%, #0d9488 100%); /* Premium Spruce to Teal */
-  --bg-primary: #FFFFFF;
-  --bg-secondary: #F0FDFA;       /* Soft minty white */
-  --bg-tertiary: #CCFBF1;        /* Light mint highlight */
-  --text-primary: #0F172A;
-  --text-secondary: #334155;
-  --border-color: #E2E8F0;
-  --hover-bg: #E6F4F1;
+  --primary-color: #007AFF;      /* Apple System Blue */
+  --primary-light: #48A2FF;      /* Apple Lighter Blue */
+  --primary-dark: #0056B3;       /* Apple Darker Blue */
+  --secondary-color: #8E8E93;    /* Apple Neutral Gray */
+  --success-color: #34C759;      /* Apple Green */
+  --danger-color: #FF3B30;       /* Apple Red */
+  --warning-color: #FF9500;      /* Apple Orange */
   
-  --board-light: #F0FDFA;        /* Ice mint light cell */
-  --board-dark: #0d9488;         /* Spruce teal dark cell */
-  --piece-black: #042f2e;        /* Spruce deep dark */
-  --piece-white: #ffffff;
-  --board-border: #115e59;       /* Deep spruce border */
+  --body-bg: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); /* macOS Sonoma Light Wallpaper (Lavender to Sky Blue) */
+  --bg-primary: rgba(255, 255, 255, 0.78); /* Frosted White Glass Base */
+  --bg-secondary: rgba(245, 245, 247, 0.65); /* Translucent light gray */
+  --bg-tertiary: rgba(229, 229, 234, 0.8); /* Apple System Gray 5 */
+  --text-primary: #1D1D1F;       /* Apple Charcoal Text */
+  --text-secondary: #6E6E73;     /* Apple Neutral Gray Text */
+  --border-color: rgba(0, 0, 0, 0.08); /* Subtle border for light glass elements */
+  --hover-bg: rgba(0, 122, 255, 0.08); /* Translucent blue hover tint */
+  
+  --board-light: #FFFFFF;        /* Ceramic Pure White (light cells) */
+  --board-dark: #A1B2C6;         /* Apple Soft Slate Blue (dark cells) */
+  --piece-black: #1C1C1E;        /* Space Gray / Black piece base */
+  --piece-white: #FFFFFF;        /* Silver-White piece base */
+  --board-border: #E2E8F0;       /* Silver Board Border Frame */
   
   /* Navigation & Contrast */
-  --nav-bg: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
-  --nav-text: #FFFFFF;
+  --nav-bg: rgba(255, 255, 255, 0.85); /* Frosted Glass Navbar */
+  --nav-text: #1D1D1F;           /* Charcoal Text for header */
   --text-on-primary: #FFFFFF;
-  --piece-border: rgba(0,0,0,0.15);
+  --text-muted: #8E8E93;
+  --piece-border: rgba(0, 0, 0, 0.1);
 }
+
+/* --- theme-modern custom overrides --- */
+
+/* Glassmorphism for modern layout app window */
+.theme-modern #app {
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Translucent panel styling */
+.theme-modern .slide-panel {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Semi-transparent popups and modal content */
+.theme-modern .modal-content {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.18);
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* Settings selector option tag styling for light mode */
+.theme-modern select option {
+  background: #FFFFFF;
+  color: #1D1D1F;
+}
+
+/* Header Navbar top controls contrast buttons overrides */
+.theme-modern .icon-btn {
+  color: #1D1D1F !important;
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+.theme-modern .icon-btn:hover {
+  background: rgba(0, 0, 0, 0.12) !important;
+  color: #007AFF !important;
+}
+
+/* Coordinate text color overrides for light modern board cells */
+.theme-modern .show-coordinates .light::before, 
+.theme-modern .show-coordinates .light::after {
+  color: rgba(44, 62, 80, 0.55) !important;
+}
+
+.theme-modern .show-coordinates .dark::before, 
+.theme-modern .show-coordinates .dark::after {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+/* Polished glossy pieces styling */
+.theme-modern .piece {
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15), inset 0 2px 3px rgba(255, 255, 255, 0.4);
+}
+
+.theme-modern .piece.black {
+  background: radial-gradient(circle at 30% 30%, #5a5a5e 0%, #1c1c1e 100%);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.28), inset 0 2px 3px rgba(255, 255, 255, 0.15);
+}
+
+.theme-modern .piece.white {
+  background: radial-gradient(circle at 30% 30%, #ffffff 0%, #e3e3e8 100%);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1), inset 0 2px 3px rgba(255, 255, 255, 0.85);
+}
+
+/* Premium micro-animations for pieces hover */
+.theme-modern .piece:hover {
+  transform: scale(1.08) translateY(-2px);
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.22);
+}
+
+.theme-modern .piece.black:hover {
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.4), inset 0 2px 3px rgba(255, 255, 255, 0.2);
+}
+
+.theme-modern .piece.white:hover {
+  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18), inset 0 2px 3px rgba(255, 255, 255, 0.9);
+}
+
+/* Haji (King) modern piece indicator */
+.theme-modern .piece.haji {
+  border: 2px solid #FFD700;
+  box-shadow: 0 0 0 2px var(--primary-color), 0 6px 12px rgba(0, 122, 255, 0.22), 0 0 20px rgba(255, 215, 0, 0.45);
+}
+
+.theme-modern .piece.haji::after {
+  color: #FFD700;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.9), 0 2px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Alignment of turn indicator avatars */
+.theme-modern .player-indicator.black-turn .player-avatar {
+  background: var(--piece-black, #1C1C1E);
+}
+
+.theme-modern .player-indicator.white-turn .player-avatar {
+  background: var(--piece-white, #FFFFFF);
+}
+
+/* Board cells visual styling */
+.theme-modern .board-cell {
+  border: 1px solid rgba(0, 0, 0, 0.03); /* Subtle tile divider lines */
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-modern .board-cell:hover {
+  filter: brightness(1.05) contrast(1.02);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Game State Selection Highlights */
+.theme-modern .board-cell.selected {
+  background: rgba(0, 122, 255, 0.15) !important;
+  box-shadow: inset 0 0 0 3px var(--primary-color), 0 0 12px rgba(0, 122, 255, 0.3) !important;
+  border-radius: var(--radius-md);
+}
+
+/* Map location pin-style indicators for valid and capture moves */
+.theme-modern .board-cell.available-move {
+  background: rgba(52, 199, 89, 0.15) !important;
+}
+
+.theme-modern .board-cell.available-move::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #34C759; /* Apple Light Mode Green */
+  border-radius: 50%;
+  border: 2.5px solid #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  animation: modern-pulse-green 1.5s infinite ease-in-out;
+}
+
+.theme-modern .board-cell.capture-move {
+  background: rgba(255, 59, 48, 0.18) !important;
+}
+
+.theme-modern .board-cell.capture-move::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #FF3B30; /* Apple Light Mode Red */
+  border-radius: 50%;
+  border: 2.5px solid #FFFFFF;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  animation: modern-pulse-red 1.5s infinite ease-in-out;
+}
+
+@keyframes modern-pulse-green {
+  0% { transform: translate(-50%, -50%) scale(0.9); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.65); }
+  70% { transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 0 8px rgba(52, 199, 89, 0); }
+  100% { transform: translate(-50%, -50%) scale(0.9); box-shadow: 0 0 0 0 rgba(52, 199, 89, 0); }
+}
+
+@keyframes modern-pulse-red {
+  0% { transform: translate(-50%, -50%) scale(0.9); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.65); }
+  70% { transform: translate(-50%, -50%) scale(1.15); box-shadow: 0 0 0 8px rgba(255, 59, 48, 0); }
+  100% { transform: translate(-50%, -50%) scale(0.9); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+}
+
 
 .theme-dark {
   --primary-color: #a78bfa;
