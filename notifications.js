@@ -7,7 +7,7 @@ class NotificationSystem {
     constructor() {
         this.notifications = [];
         this.maxNotifications = 5;
-        this.defaultDuration = 4000; // 4 seconds
+        this.defaultDuration = 5000; // 5 seconds
         
         this.createNotificationContainer();
         this.initializeStyles();
@@ -35,7 +35,7 @@ class NotificationSystem {
                     position: fixed;
                     top: 80px;
                     right: 20px;
-                    z-index: 1000;
+                    z-index: 10010;
                     pointer-events: none;
                 }
 
@@ -209,8 +209,9 @@ class NotificationSystem {
         });
 
         // Auto-remove if not persistent
-        if (!config.persistent && config.duration > 0) {
-            this.scheduleRemoval(notification, config.duration);
+        if (!config.persistent) {
+            const finalDuration = config.duration > 0 ? config.duration : this.defaultDuration;
+            this.scheduleRemoval(notification, finalDuration);
         }
 
         return notification;
@@ -344,7 +345,7 @@ class NotificationSystem {
 
         return this.show(message, 'info', { 
             icon, 
-            duration: 2000,
+            duration: 4000, // 4 seconds
             title: 'Move Made'
         });
     }
@@ -352,7 +353,7 @@ class NotificationSystem {
     gameStatusNotification(message, type = 'info') {
         return this.show(message, type, {
             title: 'Game Status',
-            duration: 3000
+            duration: 5000 // 5 seconds
         });
     }
 
@@ -360,7 +361,7 @@ class NotificationSystem {
         const options = {
             title: 'AI Player',
             icon: '🤖',
-            duration: isThinking ? 0 : 2000, // Persistent while thinking
+            duration: isThinking ? 0 : 4000, // 4 seconds when not thinking
             persistent: isThinking,
             id: 'ai_status'
         };
@@ -411,7 +412,7 @@ class NotificationSystem {
             },
             complete: (finalMessage = 'Complete!') => {
                 this.remove(id);
-                this.success(finalMessage, { duration: 2000 });
+                this.success(finalMessage, { duration: 4000 });
             },
             error: (errorMessage = 'Operation failed') => {
                 this.remove(id);
@@ -425,14 +426,35 @@ class NotificationSystem {
 window.notificationSystem = new NotificationSystem();
 
 // Integrate with existing V2 UI system
-if (window.gameIntegration?.modernUI) {
-    // Override the existing showNotification method to use the new system
-    const originalShowNotification = window.gameIntegration.modernUI.showNotification;
-    
-    window.gameIntegration.modernUI.showNotification = function(message, type = 'info', duration = 4000) {
+function registerNotificationOverrides() {
+    // Override global showNotification
+    window.showNotification = function(message, type = 'info', duration = 5000) {
         return window.notificationSystem.show(message, type, { duration });
     };
+
+    // Override ModernUI showNotification
+    if (window.modernUI) {
+        window.modernUI.showNotification = function(message, type = 'info', duration = 5000) {
+            return window.notificationSystem.show(message, type, { duration });
+        };
+    }
+
+    if (window.gameIntegration?.modernUI) {
+        window.gameIntegration.modernUI.showNotification = function(message, type = 'info', duration = 5000) {
+            return window.notificationSystem.show(message, type, { duration });
+        };
+    }
 }
+
+// Run overrides immediately and also at different stages of page initialization
+registerNotificationOverrides();
+document.addEventListener('DOMContentLoaded', () => {
+    registerNotificationOverrides();
+    // Short delays to ensure it catches the deferred gameIntegration instantiation
+    setTimeout(registerNotificationOverrides, 50);
+    setTimeout(registerNotificationOverrides, 250);
+    setTimeout(registerNotificationOverrides, 1000);
+});
 
 // Export for module use
 if (typeof module !== 'undefined' && module.exports) {

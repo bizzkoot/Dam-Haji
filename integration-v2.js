@@ -224,7 +224,7 @@ class GameUIIntegration {
             // Show notification in V2 UI
             if (gameIntegration.modernUI) {
                 const message = winner === "Draw" ? "It's a Draw!" : `${winner} wins!`;
-                gameIntegration.modernUI.showNotification(message, 'success', 0); // 0 = persistent
+                gameIntegration.modernUI.showNotification(message, 'success', 7000); // 7000 = auto-dismiss after 7 seconds
             }
             
             console.log('Win modal should now be visible');

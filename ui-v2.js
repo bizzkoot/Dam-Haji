@@ -104,6 +104,15 @@ class ModernUI {
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') this.closeAllPanels();
         });
+
+        // Menu panel items click listeners
+        document.querySelectorAll('#menu-panel .menu-item').forEach(item => {
+            const text = item.textContent.trim();
+            item.addEventListener('click', () => {
+                this.handleMenuAction(text);
+                this.closePanel('menu-panel');
+            });
+        });
     }
 
     setupPanels() {
@@ -241,16 +250,16 @@ class ModernUI {
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
         notification.textContent = message;
-        Object.assign(notification.style, { position: 'fixed', top: '20px', right: '20px', padding: '12px 16px', borderRadius: '6px', color: 'white', fontWeight: '600', zIndex: '9999', animation: 'slideIn 0.3s ease', maxWidth: '300px' });
+        Object.assign(notification.style, { position: 'fixed', top: '20px', right: '20px', padding: '12px 16px', borderRadius: '6px', color: 'white', fontWeight: '600', zIndex: '9999', animation: 'slideIn 0.3s ease forwards', maxWidth: '300px' });
         const colors = { info: '#3498db', success: '#27ae60', warning: '#f39c12', error: '#e74c3c' };
         notification.style.backgroundColor = colors[type] || colors.info;
         document.body.appendChild(notification);
         setTimeout(() => {
-            notification.style.animation = 'slideOut 0.3s ease';
+            notification.style.animation = 'slideOut 0.3s ease forwards';
             setTimeout(() => {
                 if (notification.parentNode) notification.parentNode.removeChild(notification);
             }, 300);
-        }, 3000);
+        }, 5000);
     }
 
     handleUndo() {
@@ -281,6 +290,46 @@ class ModernUI {
                 window.resetGame();
                 this.showNotification('Game reset successfully', 'success');
             }
+        }
+    }
+    
+    handleMenuAction(action) {
+        switch (action) {
+            case 'New Game':
+                this.handleReset();
+                break;
+            case 'Save Game':
+                this.handleSave();
+                break;
+            case 'Load Game':
+                this.handleLoad();
+                break;
+            case 'Board Theme':
+                this.openPanel('settings-panel');
+                this.scrollToElement('board-theme');
+                break;
+            case 'Sound Effects':
+                this.openPanel('settings-panel');
+                this.scrollToElement('sound-toggle');
+                break;
+            case 'Animations':
+                this.openPanel('settings-panel');
+                this.scrollToElement('animations-toggle');
+                break;
+        }
+    }
+
+    scrollToElement(elementId) {
+        const targetElement = document.getElementById(elementId);
+        if (!targetElement) return;
+
+        const settingItem = targetElement.closest('.setting-item');
+        if (settingItem) {
+            settingItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            settingItem.classList.add('highlight-animation');
+            setTimeout(() => {
+                settingItem.classList.remove('highlight-animation');
+            }, 1500);
         }
     }
     

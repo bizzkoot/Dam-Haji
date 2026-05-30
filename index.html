@@ -293,16 +293,20 @@
               <span class="slider"></span>
             </label>
           </div>
+        </div>
+        
+        <div class="settings-section">
+          <h4>Appearance</h4>
           <div class="setting-item">
-            <label>Board Theme</label>
-            <select id="board-theme">
+            <label for="board-theme">Board Theme</label>
+            <select id="board-theme" aria-label="Select board theme">
               <option value="classic" selected>Classic</option>
               <option value="modern">Modern</option>
               <option value="dark">Dark</option>
             </select>
           </div>
           <div class="setting-item">
-            <label>Animations</label>
+            <label for="animations-toggle">Animations</label>
             <label class="switch">
               <input type="checkbox" id="animations-toggle" checked>
               <span class="slider"></span>
@@ -313,7 +317,7 @@
         <div class="settings-section">
           <h4>Audio</h4>
           <div class="setting-item">
-            <label>Sound Effects</label>
+            <label for="sound-toggle">Sound Effects</label>
             <label class="switch">
               <input type="checkbox" id="sound-toggle" checked>
               <span class="slider"></span>
@@ -345,21 +349,21 @@
   </div>
 
   <!-- Win Modal -->
-  <div id="win-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1003;">
-    <div style="background: white; padding: 3rem; border-radius: 16px; text-align: center; max-width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); border: 3px solid #8B4513;">
-      <div id="win-message" style="font-size: 2rem; font-weight: bold; color: #8B4513; margin-bottom: 2rem;"></div>
-      <button id="play-again" style="background: #8B4513; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 1.1rem; font-weight: bold; transition: all 0.2s ease;">Play Again</button>
+  <div id="win-modal" class="modal-overlay hidden">
+    <div class="modal-content victory-content">
+      <div id="win-message"></div>
+      <button id="play-again">Play Again</button>
     </div>
   </div>
 
   <!-- Save/Load Modal (Existing system) -->
-  <div id="save-load-modal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1002;">
-    <div id="save-load-content" style="background: white; padding: 2rem; border-radius: 12px; text-align: center; max-width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto;">
-      <div id="save-load-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="margin: 0; color: #8B4513;">Save/Load Game</h3>
-        <button id="close-save-load-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">×</button>
+  <div id="save-load-modal" class="modal-overlay hidden">
+    <div id="save-load-content" class="modal-content">
+      <div id="save-load-header">
+        <h3>Save/Load Game</h3>
+        <button id="close-save-load-modal">×</button>
       </div>
-      <div id="save-load-tabs" style="display: flex; border-bottom: 2px solid #8B4513; margin-bottom: 20px;">
+      <div id="save-load-tabs">
         <button class="tab-btn active" data-tab="save">Save Game</button>
         <button class="tab-btn" data-tab="load">Load Game</button>
       </div>

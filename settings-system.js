@@ -161,57 +161,9 @@ class SettingsSystem {
 
         if (show) {
             gameBoard.classList.add('show-coordinates');
-            this.addCoordinates();
         } else {
             gameBoard.classList.remove('show-coordinates');
-            this.removeCoordinates();
         }
-    }
-
-    addCoordinates() {
-        const gameBoard = document.getElementById('game-board');
-        if (!gameBoard) return;
-
-        // Remove existing coordinates
-        this.removeCoordinates();
-
-        // Add row labels (1-8)
-        for (let row = 0; row < 8; row++) {
-            const rowLabel = document.createElement('div');
-            rowLabel.className = 'coordinate-label row-label';
-            rowLabel.textContent = 8 - row;
-            rowLabel.style.position = 'absolute';
-            rowLabel.style.left = '-20px';
-            rowLabel.style.top = `${row * 12.5}%`;
-            rowLabel.style.height = '12.5%';
-            rowLabel.style.display = 'flex';
-            rowLabel.style.alignItems = 'center';
-            rowLabel.style.fontSize = '12px';
-            rowLabel.style.color = '#666';
-            gameBoard.appendChild(rowLabel);
-        }
-
-        // Add column labels (a-h)
-        for (let col = 0; col < 8; col++) {
-            const colLabel = document.createElement('div');
-            colLabel.className = 'coordinate-label col-label';
-            colLabel.textContent = String.fromCharCode(97 + col); // a, b, c, etc.
-            colLabel.style.position = 'absolute';
-            colLabel.style.top = '100%';
-            colLabel.style.left = `${col * 12.5}%`;
-            colLabel.style.width = '12.5%';
-            colLabel.style.display = 'flex';
-            colLabel.style.justifyContent = 'center';
-            colLabel.style.fontSize = '12px';
-            colLabel.style.color = '#666';
-            colLabel.style.marginTop = '2px';
-            gameBoard.appendChild(colLabel);
-        }
-    }
-
-    removeCoordinates() {
-        const coordinateLabels = document.querySelectorAll('.coordinate-label');
-        coordinateLabels.forEach(label => label.remove());
     }
 
     applyBoardTheme(theme) {
@@ -363,6 +315,130 @@ class SettingsSystem {
 
 // Global instance
 window.settingsSystem = new SettingsSystem();
+
+// Synthetic sound effects generator using HTML5 Web Audio API
+class SoundSystem {
+    constructor() {
+        this.ctx = null;
+    }
+
+    init() {
+        if (this.ctx) return;
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+        }
+    }
+
+    playSound(type) {
+        if (!window.soundEffectsEnabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+
+        const now = this.ctx.currentTime;
+
+        switch (type) {
+            case 'move': {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+                break;
+            }
+            case 'capture': {
+                const osc1 = this.ctx.createOscillator();
+                const gain1 = this.ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(320, now);
+                osc1.frequency.exponentialRampToValueAtTime(160, now + 0.08);
+                gain1.gain.setValueAtTime(0.3, now);
+                gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                osc1.connect(gain1);
+                gain1.connect(this.ctx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.08);
+
+                const osc2 = this.ctx.createOscillator();
+                const gain2 = this.ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(480, now + 0.08);
+                osc2.frequency.exponentialRampToValueAtTime(240, now + 0.16);
+                gain2.gain.setValueAtTime(0.25, now + 0.08);
+                gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+                osc2.connect(gain2);
+                gain2.connect(this.ctx.destination);
+                osc2.start(now + 0.08);
+                osc2.stop(now + 0.16);
+                break;
+            }
+            case 'promotion': {
+                const notes = [261.63, 329.63, 392.00, 523.25];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + (idx * 0.08));
+                    const time = now + (idx * 0.08);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.15, time);
+                    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(time);
+                    osc.stop(time + 0.25);
+                });
+                break;
+            }
+            case 'win': {
+                const notes = [329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + (idx * 0.1));
+                    const time = now + (idx * 0.1);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.2, time);
+                    gain.gain.exponentialRampToValueAtTime(0.01, time + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(time);
+                    osc.stop(time + 0.4);
+                });
+                break;
+            }
+            case 'invalid': {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.linearRampToValueAtTime(80, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.15);
+                break;
+            }
+        }
+    }
+}
+window.soundSystem = new SoundSystem();
+document.addEventListener('click', () => {
+    if (window.soundSystem) window.soundSystem.init();
+}, { once: true });
 
 // Export for module use
 if (typeof module !== 'undefined' && module.exports) {

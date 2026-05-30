@@ -71,7 +71,7 @@ class MenuSystem {
         });
     }
 
-    togglePanel(panelId) {
+    togglePanel(panelId, targetElementId = null) {
         const panel = document.getElementById(panelId);
         if (!panel) return;
 
@@ -84,11 +84,11 @@ class MenuSystem {
                 this.closePanel(this.activePanel);
             }
             // Open the requested panel
-            this.openPanel(panelId);
+            this.openPanel(panelId, targetElementId);
         }
     }
 
-    openPanel(panelId) {
+    openPanel(panelId, targetElementId = null) {
         const panel = document.getElementById(panelId);
         if (!panel) return;
 
@@ -104,6 +104,11 @@ class MenuSystem {
         requestAnimationFrame(() => {
             panel.classList.add('slide-in');
             panel.classList.add('active');
+            
+            // Scroll to target element if specified
+            if (targetElementId) {
+                this.scrollToElement(panel, targetElementId);
+            }
         });
 
         this.activePanel = panelId;
@@ -204,16 +209,15 @@ class MenuSystem {
                 break;
 
             case 'Board Theme':
-                this.togglePanel('settings-panel');
+                this.togglePanel('settings-panel', 'board-theme');
                 break;
-
+                
             case 'Sound Effects':
-                this.togglePanel('settings-panel');
+                this.togglePanel('settings-panel', 'sound-toggle');
                 break;
-
+                
             case 'Animations':
-                this.togglePanel('settings-panel');
-                break;
+                this.togglePanel('settings-panel', 'animations-toggle');
 
             default:
                 console.log('Unknown menu action:', action);
@@ -287,6 +291,26 @@ class MenuSystem {
         // Trigger settings system to refresh if available
         if (window.settingsSystem?.refreshSettingsDisplay) {
             window.settingsSystem.refreshSettingsDisplay();
+        }
+    }
+
+    scrollToElement(panel, elementId) {
+        const targetElement = document.getElementById(elementId);
+        if (!targetElement) return;
+
+        // Find the parent setting-item for better positioning
+        const settingItem = targetElement.closest('.setting-item');
+        if (settingItem) {
+            // Scroll the element into view with smooth behavior
+            settingItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Add highlight animation
+            settingItem.classList.add('highlight-animation');
+            
+            // Remove highlight after animation completes
+            setTimeout(() => {
+                settingItem.classList.remove('highlight-animation');
+            }, 1500);
         }
     }
 

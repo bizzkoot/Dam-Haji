@@ -121,6 +121,11 @@ function initializeBoard(board) {
     }
     board.appendChild(rowElement);
   }
+
+  // Refresh coordinates display if setting is active
+  if (window.settingsSystem) {
+    window.settingsSystem.applyShowCoordinates(window.settingsSystem.getSetting('showCoordinates'));
+  }
 }
 
 // --- MOVE VALIDATION (FOR UI AND AI) ---

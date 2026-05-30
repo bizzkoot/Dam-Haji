@@ -250,6 +250,11 @@ function restoreGameState(stateIndex) {
     
     // Clear any ongoing drag operations
     cleanupDragState();
+
+    // Refresh coordinates display if setting is active
+    if (window.settingsSystem) {
+        window.settingsSystem.applyShowCoordinates(window.settingsSystem.getSetting('showCoordinates'));
+    }
 }
 
 function updateRecentMovesAfterUndoRedo() {
@@ -432,6 +437,12 @@ function loadGameFromSlot(slotNumber) {
         updateSaveLoadUI();
         
         showNotification(`Game loaded from slot ${slotNumber + 1}`, 'success');
+        
+        // Refresh coordinates display if setting is active
+        if (window.settingsSystem) {
+            window.settingsSystem.applyShowCoordinates(window.settingsSystem.getSetting('showCoordinates'));
+        }
+        
         return true;
     } catch (error) {
         console.error('Error loading game:', error);
@@ -581,6 +592,11 @@ function showAutoSaveRecoveryDialog(saveData) {
         updateCurrentPlayerDisplay();
         updateAIDisplay();
         showNotification('Auto-saved game restored', 'success');
+        
+        // Refresh coordinates display if setting is active
+        if (window.settingsSystem) {
+            window.settingsSystem.applyShowCoordinates(window.settingsSystem.getSetting('showCoordinates'));
+        }
     } else {
         localStorage.removeItem('dam_haji_autosave');
     }
@@ -1019,14 +1035,19 @@ function executeMove(move) {
             }, 200);
             capturedCell.innerHTML = "";
         }
+        if (window.soundSystem) window.soundSystem.playSound('capture');
     } else {
         movesSinceCapture++; // Increment counter on regular move
+        if (window.soundSystem) window.soundSystem.playSound('move');
     }
 
     // Check for Haji promotion
     if ((endRow === 0 && piece.classList.contains("white")) || (endRow === 7 && piece.classList.contains("black"))) {
         if (!piece.classList.contains("haji")) { // Only promote if not already Haji
             isHajiPromotion = true;
+            setTimeout(() => {
+                if (window.soundSystem) window.soundSystem.playSound('promotion');
+            }, 150);
         }
         piece.classList.add("haji");
     }
@@ -1119,6 +1140,7 @@ function handleClick(event) {
             executeMove({ piece: selectedPiece, startRow, startCol, endRow: row, endCol: col, isCapture });
         } else {
             showNotification(mustCapture ? "You must capture when possible!" : "Invalid move!", "error");
+            if (window.soundSystem) window.soundSystem.playSound('invalid');
             selectedPiece = null;
             clearHighlights();
         }
@@ -1230,6 +1252,8 @@ function showWinMessage(winner) {
       // No specific animation for draw
   } else {
       winMessage.textContent = `${winner} wins!`;
+      
+      if (window.soundSystem) window.soundSystem.playSound('win');
       
       // Apply appropriate win animation class using existing CSS
       if (winner === "Black") {
