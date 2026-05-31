@@ -1373,10 +1373,6 @@ function makeAIMove() {
             const piece = getPiece(bestMove.startRow, bestMove.startCol);
             if (piece) {
                 executeMove({ ...bestMove, piece });
-                // Brief stats notification (only for hard+ to avoid spam)
-                if (aiDifficulty !== 'easy') {
-                    showNotification(`AI (${aiDifficulty}) played in ${searchTime}ms`, 'info');
-                }
             } else {
                 console.error('No piece found at start position', bestMove.startRow, bestMove.startCol);
             }
