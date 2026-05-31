@@ -7,7 +7,7 @@
 const AI_TIME_LIMITS = {
     easy: 500,      // 0.5 seconds
     medium: 1500,   // 1.5 seconds
-    hard: 15000     // 15 seconds (INCREASED: 12s→15s for SUPER HARD mode)
+    hard: 5000      // 5 seconds (Optimized for faster thinking)
 };
 
 function getTimeLimit(aiDifficulty) {
@@ -1578,7 +1578,7 @@ function getDynamicDepth(aiDifficulty, gamePhase, board, player) {
     const baseDepths = {
         easy: { opening: 2, midgame: 3, endgame: 4 },
         medium: { opening: 5, midgame: 6, endgame: 8 },
-        hard: { opening: 16, midgame: 20, endgame: 24 }  // SUPER HARD: 14/18/22 → 16/20/24 plies
+        hard: { opening: 10, midgame: 12, endgame: 14 }  // Tuned for optimal thinking speed
     };
 
     let depth = baseDepths[aiDifficulty][gamePhase];
@@ -1604,26 +1604,26 @@ function getDynamicDepth(aiDifficulty, gamePhase, board, player) {
 
     // CRITICAL: PANIC MODE - Opponent has Haji, AI doesn't
     if (aiDifficulty === 'hard' && opponentHajiCount >= 1 && hajiCount === 0) {
-        depth += 8; // SUPER DESPERATE: Even deeper search (6→8)
+        depth += 4; // Deeper search under panic (reduced from 8 for responsiveness)
     }
 
-    // CRITICAL: Increase depth significantly when opponent has Haji
+    // CRITICAL: Increase depth when opponent has Haji
     if (opponentHajiCount >= 1) {
-        depth += 6; // Even more desperate (5→6)
+        depth += 3; // Deeper search when opponent has Haji (reduced from 6 for speed)
     }
     if (hajiCount >= 1) {
-        depth += 4; // Use own Haji more effectively (3→4)
+        depth += 2; // Use own Haji more effectively (reduced from 4 for speed)
     }
 
     // For HARD mode: INCREASE depth in complex positions, not reduce!
-    // Complex positions with many moves need deeper search to find tactical sequences
     if (aiDifficulty === 'hard' && (moveInfo.captureMoves.length + moveInfo.regularMoves.length) > 25) {
-        depth += 4; // Search deeper in complex positions (3→4)
+        depth += 2; // Search deeper in complex positions (reduced from 4 for speed)
     } else if ((moveInfo.captureMoves.length + moveInfo.regularMoves.length) > 25) {
         depth = Math.max(depth - 1, 3); // Only reduce for easy/medium
     }
 
-    return Math.min(depth, 32); // Cap at 32 for SUPER HARD mode (28→32)
+    const maxCap = aiDifficulty === 'hard' ? 20 : 32;
+    return Math.min(depth, maxCap);
 }
 
 function iterativeDeepeningSync(board, player, aiDifficulty, aiPlayer, maxTime = 5000) {
