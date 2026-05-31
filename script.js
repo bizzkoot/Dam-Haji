@@ -10,6 +10,7 @@ let whiteScore = 0;
 let aiEnabled = false;
 let aiDifficulty = "medium";
 let aiPlayer = "W";
+let gameReviewMode = false;
 let movesSinceCapture = 0;
 const MAX_MOVES_WITHOUT_CAPTURE = 50;
 let detailedDebugLoggingEnabled = false;
@@ -129,72 +130,113 @@ function saveGameState() {
 }
 
 function undoMove() {
-    console.log(`[UNDO] Starting undo, currentStateIndex: ${currentStateIndex}, total states: ${gameStates.length}`);
-    
-    if (currentStateIndex > 0) {
-        // Undo one move
-        currentStateIndex--;
-        console.log(`[UNDO] About to restore state ${currentStateIndex}`);
+    try {
+        console.log(`[UNDO] Starting undo, currentStateIndex: ${currentStateIndex}, total states: ${gameStates.length}`);
         
-        restoreGameState(currentStateIndex);
-        console.log(`[UNDO] State restored, updating UI`);
+        // Clear any pending AI moves/thinking immediately
+        if (window.aiMoveTimeout) {
+            clearTimeout(window.aiMoveTimeout);
+            window.aiMoveTimeout = null;
+        }
+        window.aiThinking = false;
+        updateAIDisplay(false);
         
-        updateCurrentPlayerDisplay();
-        updateScore();
-        updateMoveHistoryDisplay();
-        updateUndoRedoButtons();
+        // Increment generation to invalidate any in-progress AI computation
+        window.aiMoveGeneration = (window.aiMoveGeneration || 0) + 1;
         
-        // Update Move History panel if it's open
-        if (window.menuSystem) {
-            window.menuSystem.updateMoveHistory();
+        if (currentStateIndex > 0) {
+            // Undo one move
+            currentStateIndex--;
+            
+            console.log(`[UNDO] About to restore state ${currentStateIndex}`);
+            restoreGameState(currentStateIndex);
+            console.log(`[UNDO] State restored, updating UI`);
+            
+            updateCurrentPlayerDisplay();
+            updateScore();
+            updateMoveHistoryDisplay();
+            updateUndoRedoButtons();
+            
+            // Update Move History panel if it's open
+            if (window.menuSystem) {
+                window.menuSystem.updateMoveHistory();
+            }
+            
+            showNotification('Move undone', 'info');
+            
+            // Clear any ongoing selections
+            clearHighlights();
+            selectedPiece = null;
+            
+            // Enter review mode: prevent AI auto-play and block board clicks
+            // until user explicitly clicks Resume
+            enterReviewMode();
+            
+            console.log(`[UNDO] Undo completed successfully`);
+            return true; // Success
         }
         
-        showNotification('Move undone', 'info');
-        
-        // Clear any ongoing selections
-        clearHighlights();
-        selectedPiece = null;
-        
-        console.log(`[UNDO] Undo completed successfully`);
-        return true; // Success
+        console.log(`[UNDO] No moves to undo`);
+        return false; // No more moves to undo
+    } catch (e) {
+        console.error('[UNDO] Error during undo:', e);
+        return false;
     }
-    
-    console.log(`[UNDO] No moves to undo`);
-    return false; // No more moves to undo
 }
 
 function redoMove() {
-    if (currentStateIndex < gameStates.length - 1) {
-        // Redo debug logs disabled for performance
-        currentStateIndex++;
-        restoreGameState(currentStateIndex);
-        updateCurrentPlayerDisplay();
-        updateScore();
-        updateMoveHistoryDisplay();
-        updateUndoRedoButtons();
-        
-        // Update Move History panel if it's open
-        if (window.menuSystem) {
-            window.menuSystem.updateMoveHistory();
+    try {
+        // Clear any pending AI moves/thinking immediately
+        if (window.aiMoveTimeout) {
+            clearTimeout(window.aiMoveTimeout);
+            window.aiMoveTimeout = null;
         }
+        window.aiThinking = false;
+        updateAIDisplay(false);
         
-        showNotification('Move redone', 'info');
+        // Increment generation to invalidate any in-progress AI computation
+        window.aiMoveGeneration = (window.aiMoveGeneration || 0) + 1;
         
-        // Clear any ongoing selections
-        clearHighlights();
-        selectedPiece = null;
-        return true; // Success
+        if (currentStateIndex < gameStates.length - 1) {
+            currentStateIndex++;
+            
+            restoreGameState(currentStateIndex);
+            updateCurrentPlayerDisplay();
+            updateScore();
+            updateMoveHistoryDisplay();
+            updateUndoRedoButtons();
+            
+            // Update Move History panel if it's open
+            if (window.menuSystem) {
+                window.menuSystem.updateMoveHistory();
+            }
+            
+            showNotification('Move redone', 'info');
+            
+            // Clear any ongoing selections
+            clearHighlights();
+            selectedPiece = null;
+            
+            // Enter review mode: prevent AI auto-play and block board clicks
+            // until user explicitly clicks Resume
+            enterReviewMode();
+            
+            return true; // Success
+        }
+        return false; // No more moves to redo
+    } catch (e) {
+        console.error('[REDO] Error during redo:', e);
+        return false;
     }
-    return false; // No more moves to redo
 }
 
 function restoreGameState(stateIndex) {
     if (stateIndex < 0 || stateIndex >= gameStates.length) return;
     
     const state = gameStates[stateIndex];
-    
-    // Restore board state by updating existing board
     const board = document.getElementById('game-board');
+    
+    // --- Rebuild the board ---
     board.innerHTML = '';
     
     for (let row = 0; row < 8; row++) {
@@ -364,6 +406,9 @@ function saveGameToSlot(slotNumber) {
 
 function loadGameFromSlot(slotNumber) {
     try {
+        // Exit review mode if active — loaded game resumes normally
+        exitReviewMode();
+        
         const saves = getSavedGames();
         const saveData = saves[slotNumber];
         
@@ -441,6 +486,17 @@ function loadGameFromSlot(slotNumber) {
         // Refresh coordinates display if setting is active
         if (window.settingsSystem) {
             window.settingsSystem.applyShowCoordinates(window.settingsSystem.getSetting('showCoordinates'));
+        }
+        
+        // Handle AI start/reset if loaded state is AI's turn
+        if (window.aiMoveTimeout) {
+            clearTimeout(window.aiMoveTimeout);
+            window.aiMoveTimeout = null;
+        }
+        window.aiThinking = false;
+        updateAIDisplay(false);
+        if (aiEnabled && currentPlayer === aiPlayer) {
+            window.aiMoveTimeout = setTimeout(makeAIMove, 600);
         }
         
         return true;
@@ -539,6 +595,8 @@ function checkForAutoSave() {
 
 function showAutoSaveRecoveryDialog(saveData) {
     if (confirm('An auto-saved game was found. Would you like to restore it?')) {
+        // Exit review mode if active — restored game resumes normally
+        exitReviewMode();
         // Restore auto-save
         gameStates = [saveData.gameState];
         currentStateIndex = 0;
@@ -596,6 +654,17 @@ function showAutoSaveRecoveryDialog(saveData) {
         // Refresh coordinates display if setting is active
         if (window.settingsSystem) {
             window.settingsSystem.applyShowCoordinates(window.settingsSystem.getSetting('showCoordinates'));
+        }
+        
+        // Handle AI start/reset if restored state is AI's turn
+        if (window.aiMoveTimeout) {
+            clearTimeout(window.aiMoveTimeout);
+            window.aiMoveTimeout = null;
+        }
+        window.aiThinking = false;
+        updateAIDisplay(false);
+        if (aiEnabled && currentPlayer === aiPlayer) {
+            window.aiMoveTimeout = setTimeout(makeAIMove, 600);
         }
     } else {
         localStorage.removeItem('dam_haji_autosave');
@@ -882,6 +951,26 @@ function initializePhase1Features() {
         }
     });
     
+    // Initialize resume button listener
+    const resumeBtn = document.getElementById('resume-btn');
+    if (resumeBtn) {
+        resumeBtn.addEventListener('click', handleResumeClick);
+    }
+    
+    // Debug: log current state info directly on undo button click
+    const undoBtn = document.getElementById('undo-btn');
+    if (undoBtn) {
+        undoBtn.addEventListener('click', function debugUndoClick() {
+            console.log(`[DEBUG] Undo button clicked. State: ${currentStateIndex}/${gameStates.length-1}, reviewMode: ${gameReviewMode}, buttons: enabled=${!this.disabled}`);
+        });
+    }
+    const redoBtn = document.getElementById('redo-btn');
+    if (redoBtn) {
+        redoBtn.addEventListener('click', function debugRedoClick() {
+            console.log(`[DEBUG] Redo button clicked. State: ${currentStateIndex}/${gameStates.length-1}, reviewMode: ${gameReviewMode}, buttons: enabled=${!this.disabled}`);
+        });
+    }
+    
     // Initialize initial game state
     saveGameState();
     updateUndoRedoButtons();
@@ -950,6 +1039,75 @@ function clearHighlights() {
     el.classList.remove('selected', 'available-move', 'capture-move', 'no-moves');
   });
 }
+
+// --- REVIEW MODE (after undo/redo, resume control) ---
+
+function enterReviewMode() {
+    try {
+        if (gameReviewMode) return; // Already in review mode
+        
+        gameReviewMode = true;
+        
+        // Show the non-intrusive review badge at bottom of board
+        const badge = document.getElementById('review-badge');
+        if (badge) {
+            badge.classList.remove('hidden');
+        }
+        
+        // Clear any pending selections
+        clearHighlights();
+        selectedPiece = null;
+        
+        console.log('[REVIEW] Entered review mode — AI auto-play paused, board clicks blocked');
+    } catch (e) {
+        console.warn('[REVIEW] Error entering review mode:', e);
+    }
+}
+
+function exitReviewMode() {
+    try {
+        if (!gameReviewMode) return; // Not in review mode
+        
+        gameReviewMode = false;
+        
+        // Hide the review badge
+        const badge = document.getElementById('review-badge');
+        if (badge) {
+            badge.classList.add('hidden');
+        }
+        
+        // Clear any pending selections
+        clearHighlights();
+        selectedPiece = null;
+        
+        console.log('[REVIEW] Exited review mode — resuming normal play');
+        
+        // Clear any stale AI timeout before triggering new one
+        if (window.aiMoveTimeout) {
+            clearTimeout(window.aiMoveTimeout);
+            window.aiMoveTimeout = null;
+        }
+        window.aiThinking = false;
+        
+        // If AI is enabled and it's AI's turn, trigger AI move after a brief delay
+        if (aiEnabled && currentPlayer === aiPlayer) {
+            window.aiMoveTimeout = setTimeout(makeAIMove, 600);
+            showNotification('AI is thinking...', 'info');
+        } else {
+            showNotification('Game resumed — your turn!', 'info');
+        }
+    } catch (e) {
+        console.warn('[REVIEW] Error exiting review mode:', e);
+    }
+}
+
+function handleResumeClick() {
+    console.log('[REVIEW] Resume button clicked');
+    exitReviewMode();
+}
+
+// Make resume handler accessible globally
+window.handleResumeClick = handleResumeClick;
 
 function highlightAvailableMoves(piece) {
     clearHighlights();
@@ -1102,11 +1260,18 @@ function executeMove(move) {
 }
 
 function handleClick(event) {
-    // Prevent human moves when it's AI's turn
-    if (aiEnabled && currentPlayer === aiPlayer) {
-        showNotification("It's AI's turn!", "warning");
-        return;
-    }
+    try {
+        // Block board clicks in review mode — user must click Resume to continue
+        if (gameReviewMode) {
+            showNotification("In review mode. Click 'Resume Game' to continue playing.", "info");
+            return;
+        }
+        
+        // Prevent human moves when it's AI's turn
+        if (aiEnabled && currentPlayer === aiPlayer) {
+            showNotification("It's AI's turn!", "warning");
+            return;
+        }
 
     const square = event.currentTarget;
     const row = parseInt(square.dataset.row);
@@ -1143,6 +1308,9 @@ function handleClick(event) {
             highlightAvailableMoves(piece);
         }
     }
+    } catch (e) {
+        console.warn('[CLICK] Error in handleClick:', e);
+    }
 }
 
 function makeAIMove() {
@@ -1155,13 +1323,17 @@ function makeAIMove() {
         return;
     }
     
+    // Capture the current generation to detect stale AI moves
+    const myGeneration = window.aiMoveGeneration || 0;
+    
     window.aiThinking = true;
     updateAIDisplay(true); // Show AI is thinking
 
-    setTimeout(() => {
+    window.aiMoveTimeout = setTimeout(() => {
         // Double-check conditions haven't changed
         if (!aiEnabled || currentPlayer !== aiPlayer) {
             window.aiThinking = false;
+            window.aiMoveTimeout = null;
             updateAIDisplay(false);
             return;
         }
@@ -1170,7 +1342,14 @@ function makeAIMove() {
         const bestMove = findBestMove(board, aiPlayer, aiDifficulty, aiPlayer);
         
         window.aiThinking = false;
+        window.aiMoveTimeout = null;
         updateAIDisplay(false); // Reset AI status
+        
+        // Check if undo/redo has invalidated this AI move (generation changed)
+        if ((window.aiMoveGeneration || 0) !== myGeneration) {
+            console.log('[AI] Move stale (generation changed), discarding');
+            return;
+        }
 
         if (bestMove) {
             const piece = getPiece(bestMove.startRow, bestMove.startCol);
@@ -1220,6 +1399,10 @@ function resetGame() {
   const winModal = document.getElementById('win-modal');
   winModal.classList.add('hidden');
   winModal.classList.remove('win-animation-black', 'win-animation-white');
+  
+  // Exit review mode if active and reset AI move generation counter
+  exitReviewMode();
+  window.aiMoveGeneration = 0;
   
   if (aiEnabled && currentPlayer === aiPlayer) {
     // Clear any pending AI moves and reset flags

@@ -276,14 +276,18 @@ class ModernUI {
     handleUndo() {
         if (typeof window.undoMove === 'function') {
             const success = window.undoMove();
-            this.showNotification(success ? 'Move undone' : 'Nothing to undo', success ? 'info' : 'warning');
+            if (!success) {
+                this.showNotification('Nothing to undo', 'warning');
+            }
         }
     }
 
     handleRedo() {
         if (typeof window.redoMove === 'function') {
             const success = window.redoMove();
-            this.showNotification(success ? 'Move redone' : 'Nothing to redo', success ? 'info' : 'warning');
+            if (!success) {
+                this.showNotification('Nothing to redo', 'warning');
+            }
         }
     }
 

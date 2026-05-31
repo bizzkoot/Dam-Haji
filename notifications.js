@@ -286,14 +286,16 @@ class NotificationSystem {
     }
 
     removeElement(notification) {
+        if (notification.classList.contains('removing')) return;
         notification.classList.add('removing');
+        
+        // Remove from tracking array synchronously to prevent infinite loops when adding new notifications
+        this.notifications = this.notifications.filter(n => n.element !== notification);
         
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
             }
-            // Remove from tracking array
-            this.notifications = this.notifications.filter(n => n.element !== notification);
         }, 300);
     }
 
@@ -303,6 +305,9 @@ class NotificationSystem {
             const oldest = this.notifications[0];
             if (oldest) {
                 this.removeElement(oldest.element);
+            } else {
+                // Prevent infinite loop if oldest is undefined but length is positive
+                this.notifications.shift();
             }
         }
     }
@@ -371,7 +376,7 @@ class NotificationSystem {
 
     // Clear all notifications
     clear() {
-        this.notifications.forEach(notification => {
+        [...this.notifications].forEach(notification => {
             this.removeElement(notification.element);
         });
     }
