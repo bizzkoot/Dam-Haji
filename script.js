@@ -217,9 +217,13 @@ function redoMove() {
             clearHighlights();
             selectedPiece = null;
             
-            // Enter review mode: prevent AI auto-play and block board clicks
-            // until user explicitly clicks Resume
-            enterReviewMode();
+            // Automatically resume game if we're back to the latest state,
+            // otherwise enter/remain in review mode.
+            if (currentStateIndex === gameStates.length - 1) {
+                exitReviewMode();
+            } else {
+                enterReviewMode();
+            }
             
             return true; // Success
         }
