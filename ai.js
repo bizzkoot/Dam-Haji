@@ -7,7 +7,8 @@
 const AI_TIME_LIMITS = {
     easy: 500,      // 0.5 seconds
     medium: 1500,   // 1.5 seconds
-    hard: 5000      // 5 seconds (Optimized for faster thinking)
+    hard: 5000,     // 5 seconds
+    legendary: 8000 // 8 seconds for maximum challenge
 };
 
 function getTimeLimit(aiDifficulty) {
@@ -64,6 +65,13 @@ const AI_WEIGHTS = {
         positionValue: 2.0,    // PST max bonus = 12 * 2.0 = 24 (24% of pawn)
         hajiValue: 600,        // Haji = 600 (6x pawn)
         centerControl: 15.0    // Center control max bonus = ~13 (13% of pawn)
+    },
+    legendary: {
+        captureValue: 120,
+        pieceValue: 120,       // Pawn = 120 (+20% over hard)
+        positionValue: 3.0,    // PST max bonus = 12 * 3.0 = 36 (30% of pawn)
+        hajiValue: 800,        // Haji = 800 (6.7x pawn)
+        centerControl: 20.0    // Center control max bonus = ~17 (14% of pawn)
     }
 };
 
@@ -282,25 +290,45 @@ const ZOBRIST = {
 
 class TranspositionTable {
     constructor() {
-        this.table = new Map();
-        this.maxSize = 500000;
+        // Two-tier table: primary holds fresh entries, secondary holds demoted entries.
+        // When primary fills, it becomes secondary (preserving deeper data) and a new
+        // empty primary is created. This avoids clearing ALL entries on overflow.
+        this.primary = new Map();
+        this.secondary = new Map();
+        this.maxPrimarySize = 300000;
+        this.maxSecondarySize = 400000;
         this.hits = 0;
         this.total = 0;
     }
 
     get(hash) {
-        return this.table.get(hash);
+        this.total++;
+        let entry = this.primary.get(hash);
+        if (entry) {
+            this.hits++;
+            return entry;
+        }
+        entry = this.secondary.get(hash);
+        if (entry) {
+            this.hits++;
+        }
+        return entry;
     }
 
     set(hash, depth, score, flag, bestMove) {
-        if (this.table.size >= this.maxSize) {
-            this.table.clear(); // Simple eviction strategy
+        this.primary.set(hash, { depth, score, flag, bestMove });
+
+        if (this.primary.size >= this.maxPrimarySize) {
+            // Demote primary to secondary — keeps ~300K most recently added entries
+            // alive, while the old secondary is garbage-collected.
+            this.secondary = this.primary;
+            this.primary = new Map();
         }
-        this.table.set(hash, { depth, score, flag, bestMove });
     }
 
     reset() {
-        this.table.clear();
+        this.primary.clear();
+        this.secondary.clear();
         this.hits = 0;
         this.total = 0;
     }
@@ -316,20 +344,97 @@ let transpositionTable = new TranspositionTable();
 const OPENING_BOOK = {
     // Black's first move options (center advancement from starting position)
     blackFirstMoves: [
-        { startRow: 2, startCol: 1, endRow: 3, endCol: 2 },
-        { startRow: 2, startCol: 3, endRow: 3, endCol: 4 },
-        { startRow: 2, startCol: 5, endRow: 3, endCol: 6 },
-        { startRow: 2, startCol: 7, endRow: 3, endCol: 6 },
-        { startRow: 2, startCol: 1, endRow: 3, endCol: 0 }
+        { startRow: 2, startCol: 1, endRow: 3, endCol: 2 },  // Center left
+        { startRow: 2, startCol: 3, endRow: 3, endCol: 4 },  // Center
+        { startRow: 2, startCol: 5, endRow: 3, endCol: 6 },  // Center right
+        { startRow: 2, startCol: 7, endRow: 3, endCol: 6 },  // Right edge
+        { startRow: 2, startCol: 1, endRow: 3, endCol: 0 },  // Left edge
+        { startRow: 2, startCol: 3, endRow: 3, endCol: 2 },  // Center-left diagonal
+        { startRow: 2, startCol: 5, endRow: 3, endCol: 4 },  // Center-right diagonal
+        { startRow: 1, startCol: 0, endRow: 2, endCol: 1 },  // Develop from second rank
+        { startRow: 1, startCol: 2, endRow: 2, endCol: 3 },  // Develop center second rank
+        { startRow: 1, startCol: 6, endRow: 2, endCol: 7 }   // Develop right second rank
     ],
     // White's first move options
     whiteFirstMoves: [
-        { startRow: 5, startCol: 0, endRow: 4, endCol: 1 },
-        { startRow: 5, startCol: 2, endRow: 4, endCol: 3 },
-        { startRow: 5, startCol: 4, endRow: 4, endCol: 5 },
-        { startRow: 5, startCol: 6, endRow: 4, endCol: 7 },
-        { startRow: 5, startCol: 2, endRow: 4, endCol: 1 }
-    ]
+        { startRow: 5, startCol: 0, endRow: 4, endCol: 1 },  // Center left
+        { startRow: 5, startCol: 2, endRow: 4, endCol: 3 },  // Center
+        { startRow: 5, startCol: 4, endRow: 4, endCol: 5 },  // Center right
+        { startRow: 5, startCol: 6, endRow: 4, endCol: 7 },  // Right edge
+        { startRow: 5, startCol: 2, endRow: 4, endCol: 1 },  // Left edge
+        { startRow: 5, startCol: 4, endRow: 4, endCol: 3 },  // Left-center
+        { startRow: 5, startCol: 6, endRow: 4, endCol: 5 },  // Right-center
+        { startRow: 6, startCol: 1, endRow: 5, endCol: 2 },  // Develop from second rank
+        { startRow: 6, startCol: 3, endRow: 5, endCol: 4 },  // Develop center second rank
+        { startRow: 6, startCol: 5, endRow: 5, endCol: 6 }   // Develop right second rank
+    ],
+    // Response pairs: [opponentMove] → [myResponse]
+    // Keyed by compact string "startRow,startCol,endRow,endCol"
+    responses: {
+        // Black's first move → White's best response
+        "2,1,3,2": [  // Black center left → White options
+            { startRow: 5, startCol: 2, endRow: 4, endCol: 3 },
+            { startRow: 5, startCol: 4, endRow: 4, endCol: 5 },
+            { startRow: 6, startCol: 3, endRow: 5, endCol: 4 }
+        ],
+        "2,3,3,4": [  // Black center → White options
+            { startRow: 5, startCol: 2, endRow: 4, endCol: 3 },
+            { startRow: 5, startCol: 4, endRow: 4, endCol: 5 },
+            { startRow: 5, startCol: 0, endRow: 4, endCol: 1 }
+        ],
+        "2,5,3,6": [  // Black center right → White options
+            { startRow: 5, startCol: 4, endRow: 4, endCol: 5 },
+            { startRow: 5, startCol: 6, endRow: 4, endCol: 7 },
+            { startRow: 5, startCol: 2, endRow: 4, endCol: 3 }
+        ],
+        "2,7,3,6": [  // Black right edge → White options
+            { startRow: 5, startCol: 6, endRow: 4, endCol: 7 },
+            { startRow: 5, startCol: 4, endRow: 4, endCol: 5 }
+        ],
+        "2,1,3,0": [  // Black left edge → White options
+            { startRow: 5, startCol: 0, endRow: 4, endCol: 1 },
+            { startRow: 5, startCol: 2, endRow: 4, endCol: 3 }
+        ],
+        "2,3,3,2": [  // Black center-left diag → White options
+            { startRow: 5, startCol: 2, endRow: 4, endCol: 3 },
+            { startRow: 5, startCol: 4, endRow: 4, endCol: 5 }
+        ],
+        "2,5,3,4": [  // Black center-right diag → White options
+            { startRow: 5, startCol: 4, endRow: 4, endCol: 5 },
+            { startRow: 5, startCol: 2, endRow: 4, endCol: 3 }
+        ],
+        // White's first move → Black's best response
+        "5,0,4,1": [  // White center left → Black options
+            { startRow: 2, startCol: 1, endRow: 3, endCol: 2 },
+            { startRow: 2, startCol: 3, endRow: 3, endCol: 4 }
+        ],
+        "5,2,4,3": [  // White center → Black options
+            { startRow: 2, startCol: 3, endRow: 3, endCol: 4 },
+            { startRow: 2, startCol: 1, endRow: 3, endCol: 2 },
+            { startRow: 2, startCol: 5, endRow: 3, endCol: 6 }
+        ],
+        "5,4,4,5": [  // White center right → Black options
+            { startRow: 2, startCol: 3, endRow: 3, endCol: 4 },
+            { startRow: 2, startCol: 5, endRow: 3, endCol: 6 },
+            { startRow: 2, startCol: 1, endRow: 3, endCol: 0 }
+        ],
+        "5,6,4,7": [  // White right edge → Black options
+            { startRow: 2, startCol: 5, endRow: 3, endCol: 6 },
+            { startRow: 2, startCol: 7, endRow: 3, endCol: 6 }
+        ],
+        "5,2,4,1": [  // White left edge → Black options
+            { startRow: 2, startCol: 1, endRow: 3, endCol: 2 },
+            { startRow: 2, startCol: 1, endRow: 3, endCol: 0 }
+        ],
+        "5,4,4,3": [  // White left-center → Black options
+            { startRow: 2, startCol: 3, endRow: 3, endCol: 4 },
+            { startRow: 2, startCol: 1, endRow: 3, endCol: 2 }
+        ],
+        "5,6,4,5": [  // White right-center → Black options
+            { startRow: 2, startCol: 5, endRow: 3, endCol: 6 },
+            { startRow: 2, startCol: 3, endRow: 3, endCol: 4 }
+        ]
+    }
 };
 
 function isStartingPosition(board) {
@@ -339,24 +444,98 @@ function isStartingPosition(board) {
             const cell = board[r][c];
             if (!cell) continue;
             count++;
-            // All pieces should be in starting rows
             if (cell.color === 'B' && r > 2) return false;
             if (cell.color === 'W' && r < 5) return false;
         }
     }
-    return count === 24; // Full starting position
+    return count === 24;
+}
+
+function boardEqualsStarting(board) {
+    // Check if board has the standard 24-piece starting position
+    // but one piece has moved (i.e. exactly 2 pieces moved from starting rows)
+    let blackStarting = 0, whiteStarting = 0;
+    let blackMoved = 0, whiteMoved = 0;
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = board[r][c];
+            if (!cell) continue;
+            if (cell.color === 'B') {
+                if (r <= 2) blackStarting++;
+                else blackMoved++;
+            } else {
+                if (r >= 5) whiteStarting++;
+                else whiteMoved++;
+            }
+        }
+    }
+    // One-move-in: 11 black in starting rows, 1 black advanced, 12 white in starting rows
+    if (blackStarting === 11 && blackMoved === 1 && whiteStarting === 12) return 'B';
+    // Or: 12 black in starting rows, 11 white in starting rows, 1 white advanced
+    if (blackStarting === 12 && whiteStarting === 11 && whiteMoved === 1) return 'W';
+    return null;
 }
 
 function getOpeningMove(board, player) {
-    // Check if we're in the starting position or very early opening
+    // Starting position: pick from full first-move set
     if (isStartingPosition(board)) {
         const moves = player === 'B' ? OPENING_BOOK.blackFirstMoves : OPENING_BOOK.whiteFirstMoves;
-        // Pick a random opening move from the book for variety
         return moves[Math.floor(Math.random() * moves.length)];
     }
 
-    // Early opening: check for standard responses
-    // If not in a known position, return null to use search
+    // After one move: check if the opponent just played a known opening move
+    // and respond from the book
+    const movedSide = boardEqualsStarting(board);
+    if (movedSide && movedSide !== player) {
+        // Opponent just moved; find which move they played
+        const opponent = movedSide;
+        const opponentMoves = opponent === 'B' ? OPENING_BOOK.blackFirstMoves : OPENING_BOOK.whiteFirstMoves;
+        for (const oppMove of opponentMoves) {
+            const testBoard = pureApplyMove(board, oppMove);
+            // Compare: if applying this move to the starting position yields our board,
+            // then opponent played this move.
+            // Actually, we need the reverse: what move from the starting position
+            // leads to the current board? Let's check by scanning for the moved piece.
+            const ourMove = findOpponentMoveByScan(board, opponent);
+            if (ourMove) {
+                const key = `${ourMove.startRow},${ourMove.startCol},${ourMove.endRow},${ourMove.endCol}`;
+                const responses = OPENING_BOOK.responses[key];
+                if (responses && responses.length > 0) {
+                    return responses[Math.floor(Math.random() * responses.length)];
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
+function findOpponentMoveByScan(board, opponent) {
+    // Find which piece moved from starting rows to an advanced position
+    const startRows = opponent === 'B' ? [0, 1, 2] : [5, 6, 7];
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = board[r][c];
+            if (!cell) continue;
+            if (cell.color === opponent) {
+                const inStartRow = opponent === 'B' ? (r <= 2) : (r >= 5);
+                if (!inStartRow) {
+                    // This piece moved. Find its starting position.
+                    const backDir = opponent === 'B' ? -1 : 1;
+                    const sr = r + backDir;
+                    for (const dc of [-1, 1]) {
+                        const sc = c + dc;
+                        if (sc >= 0 && sc < 8) {
+                            // Check if this square is empty (piece moved from here)
+                            if (!board[sr][sc]) {
+                                return { startRow: sr, startCol: sc, endRow: r, endCol: c };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     return null;
 }
 
@@ -640,14 +819,14 @@ function evaluateBoardState(board, player, aiDifficulty) {
         }
     }
 
-    // Haji diagonal control bonus (HARD mode strategic awareness)
-    if (aiDifficulty === 'hard') {
+    // Haji diagonal control bonus (strategic awareness)
+    if (aiDifficulty === 'hard' || aiDifficulty === 'legendary') {
         const diagonalBonus = (playerHajiDiagonalControl - opponentHajiDiagonalControl) * 15;
         score += diagonalBonus;
     }
 
-    // Back rank defense bonus (critical for hard difficulty)
-    if (aiDifficulty === 'hard') {
+    // Back rank defense bonus
+    if (aiDifficulty === 'hard' || aiDifficulty === 'legendary') {
         let backRankBonus = 0;
         const backRankRow = player === 'B' ? 0 : 7;
         const opponentBackRankRow = player === 'B' ? 7 : 0;
@@ -665,6 +844,92 @@ function evaluateBoardState(board, player, aiDifficulty) {
             }
         }
         score += backRankBonus;
+    }
+
+    // Pawn structure evaluation (active for hard, reduced for medium/easy)
+    if (aiDifficulty !== 'easy') {
+        score += evaluatePawnStructure(board, player, aiDifficulty);
+    }
+
+    return score;
+}
+
+function evaluatePawnStructure(board, player, aiDifficulty) {
+    const opponent = player === 'B' ? 'W' : 'B';
+    const mult = (aiDifficulty === 'hard' || aiDifficulty === 'legendary') ? 1.0 : 0.3;
+    let score = 0;
+    let playerPawns = [];
+    let opponentPawns = [];
+
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const cell = board[r][c];
+            if (cell && !cell.haji) {
+                (cell.color === player ? playerPawns : opponentPawns).push({ r, c });
+            }
+        }
+    }
+
+    const playerSet = new Set(playerPawns.map(p => `${p.r},${p.c}`));
+    const opponentSet = new Set(opponentPawns.map(p => `${p.r},${p.c}`));
+
+    // Direction of advancement
+    const fwd = player === 'B' ? 1 : -1;
+    const oppFwd = opponent === 'B' ? 1 : -1;
+
+    for (const pawn of playerPawns) {
+        const { r, c } = pawn;
+
+        // Connected pawn bonus: pawn supported diagonally from behind
+        const supporter1 = `${r - fwd},${c - 1}`;
+        const supporter2 = `${r - fwd},${c + 1}`;
+        const isConnected = playerSet.has(supporter1) || playerSet.has(supporter2);
+        if (isConnected) {
+            score += 10 * mult;
+        }
+
+        // Isolated pawn penalty: no friendly pawns on adjacent columns within 2 rows
+        let hasNeighbor = false;
+        for (const other of playerPawns) {
+            if (other.r === r && other.c === c) continue;
+            if (Math.abs(other.c - c) <= 2 && Math.abs(other.r - r) <= 2) {
+                hasNeighbor = true;
+                break;
+            }
+        }
+        if (!hasNeighbor) {
+            score -= 15 * mult;
+        }
+
+        // Passed pawn bonus: no opponent pawn ahead on either diagonal advancement path
+        let isPassed = true;
+        for (let step = 1; step <= 7 - r; step++) {
+            const checkR = r + fwd * step;
+            const checkC1 = c + step;
+            const checkC2 = c - step;
+            if (checkC1 < 8 && opponentSet.has(`${checkR},${checkC1}`)) {
+                isPassed = false;
+                break;
+            }
+            if (checkC2 >= 0 && opponentSet.has(`${checkR},${checkC2}`)) {
+                isPassed = false;
+                break;
+            }
+        }
+        if (isPassed) {
+            const advanceBonus = 20 + 10 * (player === 'B' ? r : (7 - r));
+            score += advanceBonus * mult;
+        }
+    }
+
+    // Penalty for opponent connected pawns (they are harder to attack)
+    for (const pawn of opponentPawns) {
+        const { r, c } = pawn;
+        const supporter1 = `${r - oppFwd},${c - 1}`;
+        const supporter2 = `${r - oppFwd},${c + 1}`;
+        if (opponentSet.has(supporter1) || opponentSet.has(supporter2)) {
+            score -= 8 * mult;
+        }
     }
 
     return score;
@@ -705,7 +970,7 @@ function evaluateHajiThreatChain(nextBoard, move, player, opponent) {
 }
 
 function evaluateDefensiveNeed(board, player, opponent, aiDifficulty) {
-    if (aiDifficulty !== 'hard') return 0;
+    if (aiDifficulty !== 'hard' && aiDifficulty !== 'legendary') return 0;
 
     let defensiveNeedScore = 0;
 
@@ -817,7 +1082,7 @@ function scoreMove(board, move, player, aiDifficulty) {
     let opponentHajiCount = 0;
     let panicMode = false;
 
-    if (aiDifficulty === 'hard') {
+    if (aiDifficulty === 'hard' || aiDifficulty === 'legendary') {
         currentDefensiveNeed = evaluateDefensiveNeed(board, player, opponent, aiDifficulty);
 
         // Count Haji pieces for panic mode
@@ -1079,14 +1344,12 @@ function applyDifficultyRandomness(board, aiDifficulty, aiPlayer) {
 
     if (aiDifficulty === 'easy') {
         if (Math.random() < 0.3) {
-            // Pick from top 3-5 scored moves (weakened but not purely random)
             const topN = Math.min(5, orderedMoves.length);
             const randomIndex = Math.floor(Math.random() * topN);
             return orderedMoves[randomIndex];
         }
     } else if (aiDifficulty === 'medium') {
         if (Math.random() < 0.1) {
-            // Pick from middle of scored moves (avoid best and worst)
             if (orderedMoves.length > 3) {
                 const midStart = 1;
                 const midEnd = Math.max(2, Math.floor(orderedMoves.length * 0.7));
@@ -1095,6 +1358,7 @@ function applyDifficultyRandomness(board, aiDifficulty, aiPlayer) {
             }
         }
     }
+    // hard and legendary: no randomness — always play the best move found
 
     return null; // Return null = use bestMove from search
 }
@@ -1578,7 +1842,8 @@ function getDynamicDepth(aiDifficulty, gamePhase, board, player) {
     const baseDepths = {
         easy: { opening: 2, midgame: 3, endgame: 4 },
         medium: { opening: 5, midgame: 6, endgame: 8 },
-        hard: { opening: 10, midgame: 12, endgame: 14 }  // Tuned for optimal thinking speed
+        hard: { opening: 10, midgame: 12, endgame: 14 },
+        legendary: { opening: 14, midgame: 16, endgame: 18 }
     };
 
     let depth = baseDepths[aiDifficulty][gamePhase];
@@ -1603,26 +1868,27 @@ function getDynamicDepth(aiDifficulty, gamePhase, board, player) {
     }
 
     // CRITICAL: PANIC MODE - Opponent has Haji, AI doesn't
-    if (aiDifficulty === 'hard' && opponentHajiCount >= 1 && hajiCount === 0) {
-        depth += 4; // Deeper search under panic (reduced from 8 for responsiveness)
+    if ((aiDifficulty === 'hard' || aiDifficulty === 'legendary') && opponentHajiCount >= 1 && hajiCount === 0) {
+        depth += 4; // Deeper search under panic
     }
 
     // CRITICAL: Increase depth when opponent has Haji
     if (opponentHajiCount >= 1) {
-        depth += 3; // Deeper search when opponent has Haji (reduced from 6 for speed)
+        depth += 3; // Deeper search when opponent has Haji
     }
     if (hajiCount >= 1) {
-        depth += 2; // Use own Haji more effectively (reduced from 4 for speed)
+        depth += 2; // Use own Haji more effectively
     }
 
-    // For HARD mode: INCREASE depth in complex positions, not reduce!
-    if (aiDifficulty === 'hard' && (moveInfo.captureMoves.length + moveInfo.regularMoves.length) > 25) {
-        depth += 2; // Search deeper in complex positions (reduced from 4 for speed)
+    // INCREASE depth in complex positions, not reduce!
+    const isDeep = aiDifficulty === 'hard' || aiDifficulty === 'legendary';
+    if (isDeep && (moveInfo.captureMoves.length + moveInfo.regularMoves.length) > 25) {
+        depth += 2; // Search deeper in complex positions
     } else if ((moveInfo.captureMoves.length + moveInfo.regularMoves.length) > 25) {
-        depth = Math.max(depth - 1, 3); // Only reduce for easy/medium
+        depth = Math.max(depth - 1, 3);
     }
 
-    const maxCap = aiDifficulty === 'hard' ? 20 : 32;
+    const maxCap = isDeep ? 28 : 32;
     return Math.min(depth, maxCap);
 }
 
@@ -1652,7 +1918,7 @@ function iterativeDeepeningSync(board, player, aiDifficulty, aiPlayer, maxTime =
 
     // Aspiration window: difficulty-aware sizing
     // Use wider windows for harder difficulties (larger material values mean larger score swings)
-    const ASPIRATION_WINDOWS = { easy: 30, medium: 60, hard: 200 };  // INCREASED hard: 120→200 for deeper search accuracy
+    const ASPIRATION_WINDOWS = { easy: 30, medium: 60, hard: 200, legendary: 300 };
     const ASPIRATION_WINDOW = ASPIRATION_WINDOWS[aiDifficulty] || 50;
     let aspirate = false;
 

@@ -1012,16 +1012,17 @@ function updateAIDisplay(isThinking = false) {
     const aiStatus = document.getElementById('ai-status-text');
     const aiDifficultyDisplay = document.getElementById('ai-difficulty');
     const aiToggleBtn = document.getElementById('ai-toggle');
+    const boardEl = document.getElementById('game-board');
 
     if (aiStatus) {
         if (isThinking) {
-            aiStatus.textContent = "AI: Thinking...";
+            const label = aiDifficulty.toUpperCase();
+            aiStatus.innerHTML = `<span class="ai-thinking-label">AI (${label})</span><span class="ai-dots"><span>.</span><span>.</span><span>.</span></span>`;
             aiStatus.classList.add('ai-thinking');
         } else {
             aiStatus.textContent = aiEnabled ? "AI: ON" : "AI: OFF";
             aiStatus.classList.remove('ai-thinking');
         }
-        // Note: These classes may not be used in the new UI
         aiStatus.classList.toggle('ai-on', aiEnabled && !isThinking);
         aiStatus.classList.toggle('ai-off', !aiEnabled);
     }
@@ -1031,6 +1032,21 @@ function updateAIDisplay(isThinking = false) {
         aiToggleBtn.textContent = aiEnabled ? "AI: ON" : "AI: OFF";
         aiToggleBtn.classList.toggle('ai-on', aiEnabled);
         aiToggleBtn.classList.toggle('ai-off', !aiEnabled);
+    }
+
+    // Add/remove thinking glow on the board
+    if (boardEl) {
+        boardEl.classList.toggle('ai-thinking-glow', isThinking);
+    }
+
+    // Sync mobile AI status UI
+    const mobileStatusText = document.getElementById('mobile-ai-status-text');
+    if (mobileStatusText) {
+        mobileStatusText.textContent = aiEnabled ? "AI On" : "AI Off";
+    }
+    const mobileSwitch = document.getElementById('mobile-ai-switch');
+    if (mobileSwitch) {
+        mobileSwitch.checked = aiEnabled;
     }
 }
 
@@ -1339,7 +1355,9 @@ function makeAIMove() {
         }
         
         const board = buildBoardFromDOM();
+        const searchStart = performance.now();
         const bestMove = findBestMove(board, aiPlayer, aiDifficulty, aiPlayer);
+        const searchTime = (performance.now() - searchStart).toFixed(0);
         
         window.aiThinking = false;
         window.aiMoveTimeout = null;
@@ -1355,6 +1373,10 @@ function makeAIMove() {
             const piece = getPiece(bestMove.startRow, bestMove.startCol);
             if (piece) {
                 executeMove({ ...bestMove, piece });
+                // Brief stats notification (only for hard+ to avoid spam)
+                if (aiDifficulty !== 'easy') {
+                    showNotification(`AI (${aiDifficulty}) played in ${searchTime}ms`, 'info');
+                }
             } else {
                 console.error('No piece found at start position', bestMove.startRow, bestMove.startCol);
             }
@@ -1484,10 +1506,20 @@ window.addEventListener('load', () => {
         const btnEasy = document.getElementById('ai-easy');
         const btnMedium = document.getElementById('ai-medium');
         const btnHard = document.getElementById('ai-hard');
-        [btnEasy, btnMedium, btnHard].forEach(btn => btn && btn.classList.remove('active'));
+        const btnLegend = document.getElementById('ai-legendary');
+        const btnMobileEasy = document.getElementById('mobile-ai-easy');
+        const btnMobileMedium = document.getElementById('mobile-ai-medium');
+        const btnMobileHard = document.getElementById('mobile-ai-hard');
+        const btnMobileLegend = document.getElementById('mobile-ai-legendary');
+        [btnEasy, btnMedium, btnHard, btnLegend, btnMobileEasy, btnMobileMedium, btnMobileHard, btnMobileLegend].forEach(btn => btn && btn.classList.remove('active'));
         if (level === 'easy' && btnEasy) btnEasy.classList.add('active');
+        if (level === 'easy' && btnMobileEasy) btnMobileEasy.classList.add('active');
         if (level === 'medium' && btnMedium) btnMedium.classList.add('active');
+        if (level === 'medium' && btnMobileMedium) btnMobileMedium.classList.add('active');
         if (level === 'hard' && btnHard) btnHard.classList.add('active');
+        if (level === 'hard' && btnMobileHard) btnMobileHard.classList.add('active');
+        if (level === 'legendary' && btnLegend) btnLegend.classList.add('active');
+        if (level === 'legendary' && btnMobileLegend) btnMobileLegend.classList.add('active');
     };
 
     // Initialize correct active difficulty on load
@@ -1508,6 +1540,54 @@ window.addEventListener('load', () => {
         updateAIDisplay();
         setActiveDifficultyButton('hard');
     });
+    document.getElementById('ai-legendary').addEventListener('click', () => {
+        aiDifficulty = 'legendary';
+        updateAIDisplay();
+        setActiveDifficultyButton('legendary');
+    });
+
+    // Mobile difficulty buttons
+    document.getElementById('mobile-ai-easy').addEventListener('click', () => {
+        aiDifficulty = 'easy';
+        updateAIDisplay();
+        setActiveDifficultyButton('easy');
+    });
+    document.getElementById('mobile-ai-medium').addEventListener('click', () => {
+        aiDifficulty = 'medium';
+        updateAIDisplay();
+        setActiveDifficultyButton('medium');
+    });
+    document.getElementById('mobile-ai-hard').addEventListener('click', () => {
+        aiDifficulty = 'hard';
+        updateAIDisplay();
+        setActiveDifficultyButton('hard');
+    });
+    document.getElementById('mobile-ai-legendary').addEventListener('click', () => {
+        aiDifficulty = 'legendary';
+        updateAIDisplay();
+        setActiveDifficultyButton('legendary');
+    });
+
+    // Mobile AI toggle (checkbox)
+    document.getElementById('mobile-ai-switch').addEventListener('change', function() {
+        aiEnabled = this.checked;
+        window.aiEnabled = aiEnabled;
+        updateAIDisplay();
+        if (aiEnabled && currentPlayer === aiPlayer) {
+            if (window.aiMoveTimeout) {
+                clearTimeout(window.aiMoveTimeout);
+            }
+            window.aiThinking = false;
+            window.aiMoveTimeout = setTimeout(makeAIMove, 300);
+        }
+    });
+
+    // Mobile action buttons
+    document.getElementById('mobile-undo-btn').addEventListener('click', undoMove);
+    document.getElementById('mobile-redo-btn').addEventListener('click', redoMove);
+    document.getElementById('mobile-save-btn').addEventListener('click', () => openSaveLoadModal('save'));
+    document.getElementById('mobile-load-btn').addEventListener('click', () => openSaveLoadModal('load'));
+    document.getElementById('mobile-reset-btn').addEventListener('click', resetGame);
 
     // Initialize Debug Modal
     const debugMainBtn = document.getElementById('debug-main-btn');

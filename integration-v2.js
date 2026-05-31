@@ -233,7 +233,7 @@ class GameUIIntegration {
 
     connectGameControls() {
         // Connect undo/redo buttons - delegate to original function
-        const originalUndoMove = window.undoMove || undoMove;
+        const originalUndoMove = typeof window.undoMove === 'function' ? window.undoMove : function() { console.warn('[V2] undoMove not found'); return false; };
         window.undoMove = () => {
             const success = originalUndoMove();
             
@@ -245,7 +245,7 @@ class GameUIIntegration {
             return success;
         };
 
-        const originalRedoMove = window.redoMove || redoMove;
+        const originalRedoMove = typeof window.redoMove === 'function' ? window.redoMove : function() { console.warn('[V2] redoMove not found'); return false; };
         window.redoMove = () => {
             const success = originalRedoMove();
             
