@@ -61,10 +61,10 @@ const AI_WEIGHTS = {
     },
     hard: {
         captureValue: 100,
-        pieceValue: 100,       // Pawn = 100
-        positionValue: 2.0,    // PST max bonus = 12 * 2.0 = 24 (24% of pawn)
-        hajiValue: 600,        // Haji = 600 (6x pawn)
-        centerControl: 15.0    // Center control max bonus = ~13 (13% of pawn)
+        pieceValue: 90,        // Pawn = 90 (Tuned: decreased 10% from 100 to balance evaluation)
+        positionValue: 2.0,    // PST max bonus = 12 * 2.0 = 24
+        hajiValue: 540,        // Haji = 540 (6x pawn, Tuned: decreased 10% from 600)
+        centerControl: 15.0    // Center control max bonus = ~13
     },
     legendary: {
         captureValue: 120,
