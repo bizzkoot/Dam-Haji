@@ -1,10 +1,10 @@
 # Dam Haji - Development Progress & Status
 
-## �� Current Status: **PHASE 1 COMPLETED** ✅
+## 🛠️ Current Status: **PHASE 2 COMPLETED** ✅
 
-**Last Updated**: January 2025  
-**Version**: v1.7.0 (Modern UI System Complete)  
-**Status**: Save/Load and Move History systems fully implemented, UI refinements pending
+**Last Updated**: May 2026  
+**Version**: v2.3.0 (Phase 2 AI Overhaul Complete)  
+**Status**: Expert/Master level AI, Transposition Tables, weight tuning, and Undo/Redo auto-resume implemented.
 
 ---
 
@@ -178,34 +178,33 @@ const winTestBtn = createDebugButton('debug-win-test', 'Test Win Animation', () 
 - [x] Undo/redo functionality
 - [x] Game state persistence
 
-### 🎯 **Phase 2: Enhanced AI Strategies** (PLANNED)
+### 🎯 **Phase 2: Enhanced AI Strategies** (COMPLETED)
 
-#### **Phase 2.1: Core AI Improvements** (2-3 weeks)
-- [ ] **Iterative Deepening**: Start with depth 1, gradually increase for better move selection
-- [ ] **Move Ordering**: Prioritize promising moves for better alpha-beta pruning
-- [ ] **Variable Search Depth**: 
+#### **Phase 2.1: Core AI Improvements** (COMPLETED)
+- [x] **Iterative Deepening**: Start with depth 1, gradually increase for better move selection and timeouts
+- [x] **Move Ordering**: Prioritize promising moves (captures, killer moves, history heuristic) for better pruning
+- [x] **Variable Search Depth**: 
   - Easy: 2-3 ply
-  - Medium: 4-5 ply  
-  - Hard: 6-8 ply
-- [ ] **Endgame Recognition**: Special handling for king vs king scenarios
+  - Medium: 5-8 ply  
+  - Hard: 10-17 ply (with dynamic extension)
+  - Legendary: 14-21 ply
+- [x] **Endgame Recognition**: Special evaluation and dynamic depth handling for king vs king scenarios
 
-#### **Phase 2.2: Advanced AI Features** (3-4 weeks)
-- [ ] **Transposition Tables**: Cache evaluated positions for reuse
-- [ ] **Opening Book**: Pre-computed strong opening moves for Dam Haji
-- [ ] **Quiescence Search**: Continue capturing sequences beyond depth limit
-- [ ] **Tempo Control**: Prioritize moves that maintain initiative
+#### **Phase 2.2: Advanced AI Features** (COMPLETED)
+- [x] **Transposition Tables**: Cache evaluated positions for reuse with 64-bit Zobrist keys
+- [x] **Opening Book**: Pre-computed strong opening moves and response sets (10 moves deep)
+- [x] **Quiescence Search**: Continue capturing sequences beyond depth limit to avoid horizon effect
+- [x] **Tempo Control**: Prioritize moves that maintain initiative (center control, threat chains)
 
-#### **Phase 2.3: Performance & Polish** (2-3 weeks)
-- [ ] **Memory Optimization**: Efficient state representation
-- [ ] **Time Management**: Limit thinking time per move
-- [ ] **Blunder Simulation**: Intentionally make suboptimal moves for easier levels
-- [ ] **Parameter Fine-tuning**: Optimize all AI weights and evaluation functions
+#### **Phase 2.3: Performance & Polish** (COMPLETED)
+- [x] **Memory Optimization**: Two-tier transposition table aging (primary/secondary Maps)
+- [x] **Time Management**: Dynamic thinking time limit per move
+- [x] **Blunder Simulation**: Suboptimal/random moves for Easy and Medium levels
+- [x] **Parameter Fine-tuning**: Tuned all weights via automated self-play simulation tool
 
-#### **Phase 2.4: Advanced Strategies** (Optional - High Complexity)
-- [ ] **Neural Network Evaluation**: Train on high-quality games
-- [ ] **Reinforcement Learning**: Self-play improvement
-- [ ] **Bitboard Implementation**: Faster move generation
-- [ ] **Parallel Processing**: Multi-threaded search
+#### **Phase 2.4: Advanced Strategies** (COMPLETED)
+- [x] **Reinforcement Learning**: Weight tuning via TD(lambda) self-play training script (`benchmark-selfplay.js`)
+- [x] **Testing Suite**: Performance and verification test runner script (`benchmark.js`)
 
 ### Phase 3: Cultural Features (Low Priority)
 - [ ] Multi-language support
@@ -281,33 +280,41 @@ const winTestBtn = createDebugButton('debug-win-test', 'Test Win Animation', () 
 ## 🧠 **Current AI Implementation Analysis**
 
 ### **AI Architecture**
-- **Algorithm**: Minimax with alpha-beta pruning
-- **Search Depth**: Fixed depth per difficulty level
-- **Evaluation**: Weight-based scoring system
+- **Algorithm**: Iterative Deepening Minimax with Alpha-Beta pruning, Aspiration Windows, Killer Move heuristic, and History heuristic.
+- **Search Depth**: Dynamic depth target (Easy: 2-3, Medium: 5-8, Hard: 10-17, Legendary: 14-21 plies) with desperation Panic Mode extension.
+- **Evaluation**: Piece-Square Tables (PST) positional scoring, center control, Haji diagonal control, path blocking, and defensive threat analysis.
+- **Caching**: Two-tier Transposition Table (primary & secondary maps) utilizing 64-bit Zobrist keys.
 
 ### **Current AI Weights**
 ```javascript
 const AI_WEIGHTS = {
     easy: {
-        captureValue: 10,
-        pieceValue: 1,
-        positionValue: 0.1,
-        hajiValue: 3,
-        centerControl: 0.05
+        captureValue: 5,
+        pieceValue: 5,         // Pawn = 5.0
+        positionValue: 0.04,   // Max PST bonus = 0.48 vs piece 5
+        hajiValue: 15,         // Haji = 15.0 (3x pawn)
+        centerControl: 0.2
     },
     medium: {
-        captureValue: 15,
-        pieceValue: 1.5,
-        positionValue: 0.2,
-        hajiValue: 5,
-        centerControl: 0.1
+        captureValue: 10,
+        pieceValue: 10,        // Pawn = 10.0
+        positionValue: 0.08,   // Max PST bonus = 0.96 vs piece 10
+        hajiValue: 40,         // Haji = 40.0 (4x pawn)
+        centerControl: 0.5
     },
     hard: {
-        captureValue: 20,
-        pieceValue: 2,
-        positionValue: 0.3,
-        hajiValue: 8,
-        centerControl: 0.15
+        captureValue: 100,
+        pieceValue: 90,        // Pawn = 90.0 (Tuned)
+        positionValue: 2.0,    // Max PST bonus = 24.0 (26.7% of pawn)
+        hajiValue: 540,        // Haji = 540.0 (6x pawn, Tuned)
+        centerControl: 15.0    // Center control max bonus = 15.0
+    },
+    legendary: {
+        captureValue: 120,
+        pieceValue: 120,       // Pawn = 120.0
+        positionValue: 3.0,    // Max PST bonus = 36.0 (30% of pawn)
+        hajiValue: 800,        // Haji = 800.0 (6.7x pawn)
+        centerControl: 20.0    // Center control max bonus = 20.0
     }
 };
 ```

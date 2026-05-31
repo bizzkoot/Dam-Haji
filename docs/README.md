@@ -95,6 +95,7 @@ The Dam Haji game underwent a complete UI overhaul, transforming from a basic HT
 - **v2.0:** Complete UI overhaul with modern architecture
 - **v2.1:** Performance optimizations and bug fixes
 - **v2.2:** Final polish and documentation
+- **v2.3:** Phase 2 AI Overhaul (Zobrist hashing, Transposition Tables, Legendary difficulty, self-play benchmark weight tuning, auto-resume on redo)
 
 ## 🚀 Future Enhancements
 
