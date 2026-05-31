@@ -59,11 +59,11 @@ const AI_WEIGHTS = {
         centerControl: 0.5
     },
     hard: {
-        captureValue: 20,
-        pieceValue: 20,        // Pawn = 2.0 * 10 = 20
-        positionValue: 4.0,   // SUPER HARD: Position MORE valuable than material (1.2:1 ratio)
-        hajiValue: 120,       // SUPER HARD: Haji even more valuable (100→120)
-        centerControl: 10.0    // SUPER HARD: Center control critical (8.0→10.0)
+        captureValue: 100,
+        pieceValue: 100,       // Pawn = 100
+        positionValue: 2.0,    // PST max bonus = 12 * 2.0 = 24 (24% of pawn)
+        hajiValue: 600,        // Haji = 600 (6x pawn)
+        centerControl: 15.0    // Center control max bonus = ~13 (13% of pawn)
     }
 };
 
@@ -72,6 +72,22 @@ const AI_WEIGHTS = {
 // Killer move heuristic: array of killer moves indexed by search depth
 const MAX_SEARCH_DEPTH = 20;
 let killerMoves = new Array(MAX_SEARCH_DEPTH).fill(null);
+
+// Variables for search timing and node counts
+let searchStartTime = 0;
+let searchTimeLimit = 0;
+let searchedNodesCount = 0;
+
+function checkTimeout() {
+    searchedNodesCount++;
+    if (searchedNodesCount % 1024 === 0) {
+        if (searchStartTime > 0 && searchTimeLimit > 0) {
+            if (Date.now() - searchStartTime >= searchTimeLimit) {
+                throw new Error("SearchTimeout");
+            }
+        }
+    }
+}
 
 const MOVE_SCORES = {
     CAPTURE_BASE: 1000,
@@ -144,31 +160,34 @@ const TT_FLAG = { EXACT: 0, LOWERBOUND: 1, UPPERBOUND: 2 };
 // Zobrist hashing for efficient board position hashing
 const ZOBRIST = {
     table: null,
-    playerHash: 0,
+    playerHash: 0n,
     activePieceTable: null,
 
     init() {
-        // 8x8 board, 5 states per square: 0=empty, 1=black, 2=white, 3=black_haji, 4=white_haji
+        const random64 = () => {
+            const high = BigInt(Math.floor(Math.random() * 4294967296));
+            const low = BigInt(Math.floor(Math.random() * 4294967296));
+            return (high << 32n) | low;
+        };
+        
         this.table = [];
         for (let r = 0; r < 8; r++) {
             this.table[r] = [];
             for (let c = 0; c < 8; c++) {
                 this.table[r][c] = [];
                 for (let t = 0; t < 5; t++) {
-                    this.table[r][c][t] = Math.floor(Math.random() * 2147483648);
+                    this.table[r][c][t] = random64();
                 }
             }
         }
 
-        // Random hash for side to move (White turn)
-        this.playerHash = Math.floor(Math.random() * 2147483648);
+        this.playerHash = random64();
 
-        // Random hashes for active piece coordinates (capture chain restriction)
         this.activePieceTable = [];
         for (let r = 0; r < 8; r++) {
             this.activePieceTable[r] = [];
             for (let c = 0; c < 8; c++) {
-                this.activePieceTable[r][c] = Math.floor(Math.random() * 2147483648);
+                this.activePieceTable[r][c] = random64();
             }
         }
     },
@@ -181,7 +200,7 @@ const ZOBRIST = {
 
     hash(board, player, activePiece = null) {
         if (!this.table) this.init();
-        let h = 0;
+        let h = 0n;
         for (let r = 0; r < 8; r++) {
             for (let c = 0; c < 8; c++) {
                 const t = this.getPieceType(board[r][c]);
@@ -189,17 +208,75 @@ const ZOBRIST = {
             }
         }
 
-        // Factor player turn into hash
         if (player === 'W') {
             h ^= this.playerHash;
         }
 
-        // Factor active piece coordinate into hash
         if (activePiece) {
             h ^= this.activePieceTable[activePiece.row][activePiece.col];
         }
 
         return h;
+    },
+
+    getUpdatedHash(parentHash, board, move, player, nextPlayer, activePiece, nextActivePiece) {
+        if (!this.table) this.init();
+        let nextHash = parentHash;
+        const { startRow, startCol, endRow, endCol, isCapture } = move;
+        const piece = board[startRow][startCol];
+        if (!piece) return nextHash;
+
+        const oldPieceType = this.getPieceType(piece);
+
+        nextHash ^= this.table[startRow][startCol][oldPieceType];
+        nextHash ^= this.table[startRow][startCol][0];
+
+        const isPromotion = !piece.haji && ((endRow === 0 && piece.color === 'W') || (endRow === 7 && piece.color === 'B'));
+        const newPieceType = isPromotion ? (piece.color === 'B' ? 3 : 4) : oldPieceType;
+        
+        nextHash ^= this.table[endRow][endCol][0];
+        nextHash ^= this.table[endRow][endCol][newPieceType];
+
+        if (isCapture) {
+            let capRow, capCol;
+            if (piece.haji) {
+                const rowStep = endRow > startRow ? 1 : -1;
+                const colStep = endCol > startCol ? 1 : -1;
+                let r = startRow + rowStep, c = startCol + colStep;
+                while (r !== endRow) {
+                    if (board[r][c]) {
+                        capRow = r; capCol = c;
+                        break;
+                    }
+                    r += rowStep; c += colStep;
+                }
+            } else {
+                capRow = (startRow + endRow) / 2;
+                capCol = (startCol + endCol) / 2;
+            }
+
+            if (capRow !== undefined && capCol !== undefined) {
+                const capPiece = board[capRow][capCol];
+                if (capPiece) {
+                    const capPieceType = this.getPieceType(capPiece);
+                    nextHash ^= this.table[capRow][capCol][capPieceType];
+                    nextHash ^= this.table[capRow][capCol][0];
+                }
+            }
+        }
+
+        if (player !== nextPlayer) {
+            nextHash ^= this.playerHash;
+        }
+
+        if (activePiece) {
+            nextHash ^= this.activePieceTable[activePiece.row][activePiece.col];
+        }
+        if (nextActivePiece) {
+            nextHash ^= this.activePieceTable[nextActivePiece.row][nextActivePiece.col];
+        }
+
+        return nextHash;
     }
 };
 
@@ -569,6 +646,27 @@ function evaluateBoardState(board, player, aiDifficulty) {
         score += diagonalBonus;
     }
 
+    // Back rank defense bonus (critical for hard difficulty)
+    if (aiDifficulty === 'hard') {
+        let backRankBonus = 0;
+        const backRankRow = player === 'B' ? 0 : 7;
+        const opponentBackRankRow = player === 'B' ? 7 : 0;
+
+        for (let c = 0; c < 8; c++) {
+            // Player's back rank
+            const playerCell = board[backRankRow][c];
+            if (playerCell && playerCell.color === player && !playerCell.haji) {
+                backRankBonus += 25; // 25 points per pawn defending back rank
+            }
+            // Opponent's back rank
+            const opponentCell = board[opponentBackRankRow][c];
+            if (opponentCell && opponentCell.color !== player && !opponentCell.haji) {
+                backRankBonus -= 25; // Penalize if opponent is defending their back rank
+            }
+        }
+        score += backRankBonus;
+    }
+
     return score;
 }
 
@@ -934,6 +1032,40 @@ function orderMoves(board, moves, player, aiDifficulty) {
     })).sort((a, b) => b.score - a.score);
 }
 
+function orderMovesLightweight(board, moves, player) {
+    return moves.map(move => {
+        let score = 0;
+        const piece = board[move.startRow][move.startCol];
+        if (piece) {
+            // Capture bonus
+            if (move.isCapture) {
+                score += 1000;
+            }
+            // Promotion bonus
+            if (!piece.haji && ((move.endRow === 0 && piece.color === 'W') || (move.endRow === 7 && piece.color === 'B'))) {
+                score += 200;
+            }
+            // Haji move bonus
+            if (piece.haji) {
+                score += 50;
+            }
+            // Center control delta
+            const centerDistStart = Math.abs(move.startCol - 3.5) + Math.abs(move.startRow - 3.5);
+            const centerDistEnd = Math.abs(move.endCol - 3.5) + Math.abs(move.endRow - 3.5);
+            score += (centerDistStart - centerDistEnd) * 10;
+
+            // PST positional delta (signed relative to evaluating player)
+            const startPST = getPSTValue(board, move.startRow, move.startCol, player, piece);
+            const endPST = getPSTValue(board, move.endRow, move.endCol, player, piece);
+            score += (endPST - startPST) * 5;
+        }
+        return {
+            ...move,
+            score
+        };
+    }).sort((a, b) => b.score - a.score);
+}
+
 function applyDifficultyRandomness(board, aiDifficulty, aiPlayer) {
     // Build ordered move list for weighted randomness
     const player = aiPlayer;
@@ -1020,19 +1152,6 @@ function isKingVsKing(board, player) {
     return playerRegular === 0 && opponentRegular === 0 && playerHaji > 0 && opponentHaji > 0;
 }
 
-function evaluateEndgame(board, player, aiDifficulty) {
-    const weights = AI_WEIGHTS[aiDifficulty];
-    let score = 0;
-
-    if (isKingVsKing(board, player)) {
-        score = evaluateKingVsKing(board, player, aiDifficulty);
-    } else {
-        score = evaluateBoardState(board, player, aiDifficulty);
-    }
-
-    return score;
-}
-
 function evaluateKingVsKing(board, player, aiDifficulty) {
     let playerHaji = 0;
     let opponentHaji = 0;
@@ -1060,6 +1179,41 @@ function evaluateKingVsKing(board, player, aiDifficulty) {
     // King vs King evaluation (consolidated redundant haji multiplier)
     let score = (playerHaji - opponentHaji) * KING_EVAL.HAJI_DIFF_MULTIPLIER;
     score += (playerCenterControl - opponentCenterControl) * KING_EVAL.CENTER_CONTROL_MULTIPLIER;
+
+    // Distance heuristic for chasing and cornering
+    if (playerHaji !== opponentHaji && playerHaji > 0 && opponentHaji > 0) {
+        let minDistance = Infinity;
+        const playerHajis = [];
+        const opponentHajis = [];
+
+        for (let r = 0; r < 8; r++) {
+            for (let c = 0; c < 8; c++) {
+                const cell = board[r][c];
+                if (cell && cell.haji) {
+                    if (cell.color === player) {
+                        playerHajis.push({ r, c });
+                    } else {
+                        opponentHajis.push({ r, c });
+                    }
+                }
+            }
+        }
+
+        for (const ph of playerHajis) {
+            for (const oh of opponentHajis) {
+                const dist = Math.max(Math.abs(ph.r - oh.r), Math.abs(ph.c - oh.c));
+                if (dist < minDistance) {
+                    minDistance = dist;
+                }
+            }
+        }
+
+        if (minDistance !== Infinity) {
+            const distanceMultiplier = 50; // Strong incentive to close/widen gap
+            const distanceSign = playerHaji > opponentHaji ? -1 : 1;
+            score += distanceSign * minDistance * distanceMultiplier;
+        }
+    }
 
     return score;
 }
@@ -1160,22 +1314,24 @@ function isPieceUnderThreat(board, row, col, player, opponent) {
 // In checkers/Dam Haji, capturing is mandatory. So we cannot "stand pat" if captures
 // are available — the quiescence always explores all captures before evaluating.
 function quiescenceSearch(board, player, aiPlayer, aiDifficulty, alpha, beta, rootPlayer, isMaximizingPlayer, activePiece = null) {
+    checkTimeout();
     const moveInfo = getAllMovesForPlayer(board, player, activePiece);
     const captureMoves = moveInfo.captureMoves;
 
     if (captureMoves.length === 0) {
         // CRITICAL: Check for Haji threat creation before returning static eval
         if (aiDifficulty === 'hard' && activePiece === null) {
-            // No active piece means we're not in a capture chain
-            // Check if the last move created a Haji threat chain
-            const opponent = player === 'B' ? 'W' : 'B';
+            // No active piece means we're not in a capture chain.
+            // Check if the move just made by the opponent (who just moved) created a Haji threat chain.
+            const justMovedPlayer = player === 'B' ? 'W' : 'B';
+            const opponent = player; // Opponent of justMovedPlayer is the player about to move
 
-            // Check if any Haji on the board creates threat chains
+            // Check if any Haji belonging to the player who just moved creates threat chains
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     const piece = board[r][c];
-                    if (piece && piece.haji && piece.color === player) {
-                        const threats = countThreats(board, r, c, player, opponent);
+                    if (piece && piece.haji && piece.color === justMovedPlayer) {
+                        const threats = countThreats(board, r, c, justMovedPlayer, opponent);
                         const onMainDiagonal = (r === c) || (r + c === 7);
 
                         // If Haji creates threat chains, continue searching
@@ -1184,7 +1340,11 @@ function quiescenceSearch(board, player, aiPlayer, aiDifficulty, alpha, beta, ro
                             // Return dynamic evaluation, not static
                             const evalScore = evaluateBoardState(board, rootPlayer, aiDifficulty);
                             const threatBonus = (threats * 50) + (onMainDiagonal ? 200 : 0);
-                            return isMaximizingPlayer ? evalScore + threatBonus : evalScore - threatBonus;
+                            
+                            // If the player who just moved is the rootPlayer, it is a bonus.
+                            // If they are the opponent of rootPlayer, it is a penalty.
+                            const isRootPlayerMove = justMovedPlayer === rootPlayer;
+                            return isRootPlayerMove ? evalScore + threatBonus : evalScore - threatBonus;
                         }
                     }
                 }
@@ -1196,8 +1356,8 @@ function quiescenceSearch(board, player, aiPlayer, aiDifficulty, alpha, beta, ro
         return evaluateBoardState(board, rootPlayer, aiDifficulty);
     }
 
-    // Order captures for better pruning
-    const orderedMoves = orderMoves(board, captureMoves, player, aiDifficulty);
+    // Order captures for better pruning (lightweight inside search tree)
+    const orderedMoves = orderMovesLightweight(board, captureMoves, player);
 
     let bestScore = isMaximizingPlayer ? -Infinity : Infinity;
 
@@ -1234,9 +1394,10 @@ function quiescenceSearch(board, player, aiPlayer, aiDifficulty, alpha, beta, ro
     return bestScore;
 }
 
-function enhancedMinimax(board, depth, isMaximizingPlayer, alpha, beta, player, aiPlayer, aiDifficulty, rootPlayer, activePiece = null) {
+function enhancedMinimax(board, depth, isMaximizingPlayer, alpha, beta, player, aiPlayer, aiDifficulty, rootPlayer, activePiece = null, currentHash = null) {
+    checkTimeout();
     // Compute Zobrist hash for transposition table lookup
-    const hash = ZOBRIST.hash(board, player, activePiece);
+    const hash = currentHash !== null ? currentHash : ZOBRIST.hash(board, player, activePiece);
 
     // Check transposition table
     const ttEntry = transpositionTable.get(hash);
@@ -1261,8 +1422,8 @@ function enhancedMinimax(board, depth, isMaximizingPlayer, alpha, beta, player, 
         return isMaximizingPlayer ? -1000000 : 1000000;
     }
 
-    // Order moves for better pruning
-    const orderedMoves = orderMoves(board, moves, player, aiDifficulty);
+    // Order moves for better pruning (lightweight inside search tree)
+    const orderedMoves = orderMovesLightweight(board, moves, player);
 
     // If TT had a best move, promote it to the front
     if (ttEntry && ttEntry.bestMove) {
@@ -1305,13 +1466,18 @@ function enhancedMinimax(board, depth, isMaximizingPlayer, alpha, beta, player, 
             const nextBoard = pureApplyMove(board, move);
 
             // Check if the same piece can capture again (capture chain)
-            const continuedCaptures = pureGetAvailableCaptureMoves(nextBoard, move.endRow, move.endCol);
+            const continuedCaptures = move.isCapture ? pureGetAvailableCaptureMoves(nextBoard, move.endRow, move.endCol) : [];
+
+            // Compute rolling Zobrist hash for the child node
+            const nextPlayer = continuedCaptures.length > 0 ? player : (player === "B" ? "W" : "B");
+            const nextActivePiece = continuedCaptures.length > 0 ? { row: move.endRow, col: move.endCol } : null;
+            const nextHash = ZOBRIST.getUpdatedHash(hash, board, move, player, nextPlayer, activePiece, nextActivePiece);
 
             let evaluation;
             if (continuedCaptures.length > 0) {
-                evaluation = enhancedMinimax(nextBoard, depth - 1, true, alpha, beta, player, aiPlayer, aiDifficulty, rootPlayer, { row: move.endRow, col: move.endCol });
+                evaluation = enhancedMinimax(nextBoard, depth - 1, true, alpha, beta, player, aiPlayer, aiDifficulty, rootPlayer, nextActivePiece, nextHash);
             } else {
-                evaluation = enhancedMinimax(nextBoard, depth - 1, false, alpha, beta, player === "B" ? "W" : "B", aiPlayer, aiDifficulty, rootPlayer, null);
+                evaluation = enhancedMinimax(nextBoard, depth - 1, false, alpha, beta, nextPlayer, aiPlayer, aiDifficulty, rootPlayer, null, nextHash);
             }
 
             if (evaluation > bestScore) {
@@ -1334,13 +1500,18 @@ function enhancedMinimax(board, depth, isMaximizingPlayer, alpha, beta, player, 
             const nextBoard = pureApplyMove(board, move);
 
             // Check if the same piece can capture again (capture chain)
-            const continuedCaptures = pureGetAvailableCaptureMoves(nextBoard, move.endRow, move.endCol);
+            const continuedCaptures = move.isCapture ? pureGetAvailableCaptureMoves(nextBoard, move.endRow, move.endCol) : [];
+
+            // Compute rolling Zobrist hash for the child node
+            const nextPlayer = continuedCaptures.length > 0 ? player : (player === "B" ? "W" : "B");
+            const nextActivePiece = continuedCaptures.length > 0 ? { row: move.endRow, col: move.endCol } : null;
+            const nextHash = ZOBRIST.getUpdatedHash(hash, board, move, player, nextPlayer, activePiece, nextActivePiece);
 
             let evaluation;
             if (continuedCaptures.length > 0) {
-                evaluation = enhancedMinimax(nextBoard, depth - 1, false, alpha, beta, player, aiPlayer, aiDifficulty, rootPlayer, { row: move.endRow, col: move.endCol });
+                evaluation = enhancedMinimax(nextBoard, depth - 1, false, alpha, beta, player, aiPlayer, aiDifficulty, rootPlayer, nextActivePiece, nextHash);
             } else {
-                evaluation = enhancedMinimax(nextBoard, depth - 1, true, alpha, beta, player === "B" ? "W" : "B", aiPlayer, aiDifficulty, rootPlayer, null);
+                evaluation = enhancedMinimax(nextBoard, depth - 1, true, alpha, beta, nextPlayer, aiPlayer, aiDifficulty, rootPlayer, null, nextHash);
             }
 
             if (evaluation < bestScore) {
@@ -1474,48 +1645,60 @@ function iterativeDeepeningSync(board, player, aiDifficulty, aiPlayer, maxTime =
     const gamePhase = detectGamePhase(board, player);
     let maxDepth = getDynamicDepth(aiDifficulty, gamePhase, board, player);
 
+    // Initialize search timing and node counts
+    searchStartTime = startTime;
+    searchTimeLimit = adjustedMaxTime;
+    searchedNodesCount = 0;
+
     // Aspiration window: difficulty-aware sizing
     // Use wider windows for harder difficulties (larger material values mean larger score swings)
     const ASPIRATION_WINDOWS = { easy: 30, medium: 60, hard: 200 };  // INCREASED hard: 120→200 for deeper search accuracy
     const ASPIRATION_WINDOW = ASPIRATION_WINDOWS[aiDifficulty] || 50;
     let aspirate = false;
 
-    while (currentDepth <= maxDepth && (Date.now() - startTime) < adjustedMaxTime) {
-        let alpha = -Infinity;
-        let beta = Infinity;
+    try {
+        while (currentDepth <= maxDepth && (Date.now() - startTime) < adjustedMaxTime) {
+            let alpha = -Infinity;
+            let beta = Infinity;
 
-        // Use aspiration windows from depth 3 onwards (depth 1 & 2 always get full search for baseline)
-        // Guard: clamp bestValue before computing aspiration window.
-        // Prevents Infinity or extreme values from corrupting window arithmetic.
-        if (aspirate && currentDepth >= 3 && isFinite(bestValue)) {
-            const clamped = Math.max(-100000, Math.min(100000, bestValue));
-            alpha = Math.max(alpha, clamped - ASPIRATION_WINDOW);
-            beta = Math.min(beta, clamped + ASPIRATION_WINDOW);
-        }
-
-        const result = searchAtDepth(board, player, currentDepth, aiPlayer, aiDifficulty, alpha, beta);
-
-        // If aspiration window failed, research with full window
-        if (result.failHigh || result.failLow) {
-            const fullResult = searchAtDepth(board, player, currentDepth, aiPlayer, aiDifficulty, -Infinity, Infinity);
-            if (fullResult.move) {
-                bestMove = fullResult.move;
-                bestValue = fullResult.value;
+            // Use aspiration windows from depth 3 onwards (depth 1 & 2 always get full search for baseline)
+            // Guard: clamp bestValue before computing aspiration window.
+            // Prevents Infinity or extreme values from corrupting window arithmetic.
+            if (aspirate && currentDepth >= 3 && isFinite(bestValue)) {
+                const clamped = Math.max(-100000, Math.min(100000, bestValue));
+                alpha = Math.max(alpha, clamped - ASPIRATION_WINDOW);
+                beta = Math.min(beta, clamped + ASPIRATION_WINDOW);
             }
-        } else if (result.move) {
-            bestMove = result.move;
-            bestValue = result.value;
-            aspirate = true; // Enable aspiration for next depth
-        } else {
-            break;
-        }
 
-        currentDepth++;
+            const result = searchAtDepth(board, player, currentDepth, aiPlayer, aiDifficulty, alpha, beta);
 
-        // Check time limit more frequently
-        if (Date.now() - startTime > adjustedMaxTime) {
-            break;
+            // If aspiration window failed, research with full window
+            if (result.failHigh || result.failLow) {
+                const fullResult = searchAtDepth(board, player, currentDepth, aiPlayer, aiDifficulty, -Infinity, Infinity);
+                if (fullResult.move) {
+                    bestMove = fullResult.move;
+                    bestValue = fullResult.value;
+                }
+            } else if (result.move) {
+                bestMove = result.move;
+                bestValue = result.value;
+                aspirate = true; // Enable aspiration for next depth
+            } else {
+                break;
+            }
+
+            currentDepth++;
+
+            // Check time limit more frequently
+            if (Date.now() - startTime > adjustedMaxTime) {
+                break;
+            }
         }
+    } catch (e) {
+        if (e.message !== "SearchTimeout") {
+            throw e;
+        }
+        // Timeout caught - keep bestMove and bestValue from the last fully completed depth
     }
 
     const totalTime = Date.now() - startTime;
@@ -1558,7 +1741,7 @@ function searchAtDepth(board, player, depth, aiPlayer, aiDifficulty, alpha = -In
         const nextBoard = pureApplyMove(board, move);
 
         // Check for capture chain - if the AI's capture continues, don't toggle player
-        const continued = pureGetAvailableCaptureMoves(nextBoard, move.endRow, move.endCol);
+        const continued = move.isCapture ? pureGetAvailableCaptureMoves(nextBoard, move.endRow, move.endCol) : [];
         let nextPlayer, nextIsMaximizing, nextActivePiece;
         if (continued.length > 0) {
             // Capture chain: same player continues maximizing

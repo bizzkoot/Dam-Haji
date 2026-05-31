@@ -52,7 +52,6 @@ return {
     pureApplyMove,
     evaluateBoardState,
     evaluateKingVsKing,
-    evaluateEndgame,
     isKingVsKing,
     isEndgame,
     getPSTValue,
@@ -339,7 +338,7 @@ function runBenchmark() {
     
     // Test 5: Transposition table efficacy
     console.log('Test 5: Transposition Table (same position searched twice)');
-    const ttPos = positions.opening.board;
+    const ttPos = positions.midgame.board;
     const startTT = Date.now();
     const ttMove1 = api.findBestMove(ttPos, 'B', 'hard', 'B');
     const ttTime1 = Date.now() - startTT;
