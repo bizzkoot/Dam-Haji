@@ -15,6 +15,44 @@ let movesSinceCapture = 0;
 const MAX_MOVES_WITHOUT_CAPTURE = 50;
 let detailedDebugLoggingEnabled = false;
 
+// --- AI WEB WORKER SETUP ---
+let useWorker = false;
+let aiWorker = null;
+
+function initAIWorker() {
+    try {
+        aiWorker = new Worker('ai-worker.js');
+        useWorker = true;
+        aiWorker.onerror = function(err) {
+            console.warn("AI Web Worker error, falling back to synchronous execution:", err);
+            useWorker = false;
+        };
+    } catch (e) {
+        console.warn("Failed to initialize AI Web Worker (likely local file:// protocol or CORS restriction), falling back to synchronous mode:", e);
+        useWorker = false;
+    }
+}
+
+function cancelAIWork() {
+    if (window.aiMoveTimeout) {
+        clearTimeout(window.aiMoveTimeout);
+        window.aiMoveTimeout = null;
+    }
+    window.aiThinking = false;
+    updateAIDisplay(false);
+    
+    if (useWorker && aiWorker) {
+        try {
+            aiWorker.terminate();
+        } catch (e) {
+            console.warn("Error terminating AI worker:", e);
+        }
+        aiWorker = null;
+        initAIWorker();
+    }
+}
+
+
 // --- PHASE 1: MOVE HISTORY AND STATE MANAGEMENT FUNCTIONS ---
 
 function addMoveToHistory(move) {
@@ -134,12 +172,7 @@ function undoMove() {
         console.log(`[UNDO] Starting undo, currentStateIndex: ${currentStateIndex}, total states: ${gameStates.length}`);
         
         // Clear any pending AI moves/thinking immediately
-        if (window.aiMoveTimeout) {
-            clearTimeout(window.aiMoveTimeout);
-            window.aiMoveTimeout = null;
-        }
-        window.aiThinking = false;
-        updateAIDisplay(false);
+        cancelAIWork();
         
         // Increment generation to invalidate any in-progress AI computation
         window.aiMoveGeneration = (window.aiMoveGeneration || 0) + 1;
@@ -187,12 +220,7 @@ function undoMove() {
 function redoMove() {
     try {
         // Clear any pending AI moves/thinking immediately
-        if (window.aiMoveTimeout) {
-            clearTimeout(window.aiMoveTimeout);
-            window.aiMoveTimeout = null;
-        }
-        window.aiThinking = false;
-        updateAIDisplay(false);
+        cancelAIWork();
         
         // Increment generation to invalidate any in-progress AI computation
         window.aiMoveGeneration = (window.aiMoveGeneration || 0) + 1;
@@ -493,12 +521,7 @@ function loadGameFromSlot(slotNumber) {
         }
         
         // Handle AI start/reset if loaded state is AI's turn
-        if (window.aiMoveTimeout) {
-            clearTimeout(window.aiMoveTimeout);
-            window.aiMoveTimeout = null;
-        }
-        window.aiThinking = false;
-        updateAIDisplay(false);
+        cancelAIWork();
         if (aiEnabled && currentPlayer === aiPlayer) {
             window.aiMoveTimeout = setTimeout(makeAIMove, 600);
         }
@@ -661,12 +684,7 @@ function showAutoSaveRecoveryDialog(saveData) {
         }
         
         // Handle AI start/reset if restored state is AI's turn
-        if (window.aiMoveTimeout) {
-            clearTimeout(window.aiMoveTimeout);
-            window.aiMoveTimeout = null;
-        }
-        window.aiThinking = false;
-        updateAIDisplay(false);
+        cancelAIWork();
         if (aiEnabled && currentPlayer === aiPlayer) {
             window.aiMoveTimeout = setTimeout(makeAIMove, 600);
         }
@@ -1103,11 +1121,7 @@ function exitReviewMode() {
         console.log('[REVIEW] Exited review mode — resuming normal play');
         
         // Clear any stale AI timeout before triggering new one
-        if (window.aiMoveTimeout) {
-            clearTimeout(window.aiMoveTimeout);
-            window.aiMoveTimeout = null;
-        }
-        window.aiThinking = false;
+        cancelAIWork();
         
         // If AI is enabled and it's AI's turn, trigger AI move after a brief delay
         if (aiEnabled && currentPlayer === aiPlayer) {
@@ -1250,9 +1264,7 @@ function executeMove(move) {
         // Don't save state here - wait for turn completion
         if (aiEnabled && currentPlayer === aiPlayer) {
             // Clear any pending AI moves to prevent stacking
-            if (window.aiMoveTimeout) {
-                clearTimeout(window.aiMoveTimeout);
-            }
+            cancelAIWork();
             // Wait for the captured piece to be removed before making the next AI move
             window.aiMoveTimeout = setTimeout(makeAIMove, 600);
         }
@@ -1265,9 +1277,7 @@ function executeMove(move) {
         saveGameState();
         if (!checkWinCondition() && aiEnabled && currentPlayer === aiPlayer) {
             // Clear any pending AI moves to prevent stacking
-            if (window.aiMoveTimeout) {
-                clearTimeout(window.aiMoveTimeout);
-            }
+            cancelAIWork();
             // Use a more robust delay that waits for the DOM to be ready
             window.aiMoveTimeout = setTimeout(() => {
                 // Double-check conditions before executing
@@ -1360,31 +1370,73 @@ function makeAIMove() {
         
         const board = buildBoardFromDOM();
         const searchStart = performance.now();
-        const bestMove = findBestMove(board, aiPlayer, aiDifficulty, aiPlayer);
-        const searchTime = (performance.now() - searchStart).toFixed(0);
         
-        window.aiThinking = false;
-        window.aiMoveTimeout = null;
-        updateAIDisplay(false); // Reset AI status
-        
-        // Check if undo/redo has invalidated this AI move (generation changed)
-        if ((window.aiMoveGeneration || 0) !== myGeneration) {
-            console.log('[AI] Move stale (generation changed), discarding');
-            return;
-        }
-
-        if (bestMove) {
-            const piece = getPiece(bestMove.startRow, bestMove.startCol);
-            if (piece) {
-                executeMove({ ...bestMove, piece });
-            } else {
-                console.error('No piece found at start position', bestMove.startRow, bestMove.startCol);
-            }
+        if (useWorker && aiWorker) {
+            // Web Worker path (Asynchronous, UI remains interactive)
+            aiWorker.postMessage({ board, player: aiPlayer, aiDifficulty, aiPlayer });
+            
+            aiWorker.onmessage = function(e) {
+                // Double-check generation
+                if ((window.aiMoveGeneration || 0) !== myGeneration) {
+                    console.log('[AI Worker] Move stale (generation changed), discarding');
+                    return;
+                }
+                
+                const { success, bestMove, error } = e.data;
+                
+                window.aiThinking = false;
+                window.aiMoveTimeout = null;
+                updateAIDisplay(false);
+                
+                if (!success) {
+                    console.error('[AI Worker] Error during search:', error);
+                    checkWinCondition();
+                    return;
+                }
+                
+                const searchTime = (performance.now() - searchStart).toFixed(0);
+                if (detailedDebugLoggingEnabled) {
+                    console.log(`[AI Worker] Search took ${searchTime}ms`);
+                }
+                
+                handleAIMoveResult(bestMove);
+            };
         } else {
-            // AI has no moves, check win condition
-            checkWinCondition();
+            // Synchronous fallback (e.g., local file:// protocol)
+            const bestMove = findBestMove(board, aiPlayer, aiDifficulty, aiPlayer);
+            const searchTime = (performance.now() - searchStart).toFixed(0);
+            
+            window.aiThinking = false;
+            window.aiMoveTimeout = null;
+            updateAIDisplay(false);
+            
+            // Double-check generation
+            if ((window.aiMoveGeneration || 0) !== myGeneration) {
+                console.log('[AI] Move stale (generation changed), discarding');
+                return;
+            }
+            
+            if (detailedDebugLoggingEnabled) {
+                console.log(`[AI Sync] Search took ${searchTime}ms`);
+            }
+            
+            handleAIMoveResult(bestMove);
         }
     }, 100);
+}
+
+function handleAIMoveResult(bestMove) {
+    if (bestMove) {
+        const piece = getPiece(bestMove.startRow, bestMove.startCol);
+        if (piece) {
+            executeMove({ ...bestMove, piece });
+        } else {
+            console.error('No piece found at start position', bestMove.startRow, bestMove.startCol);
+        }
+    } else {
+        // AI has no moves, check win condition
+        checkWinCondition();
+    }
 }
 
 function resetGame() {
@@ -1426,12 +1478,8 @@ function resetGame() {
   exitReviewMode();
   window.aiMoveGeneration = 0;
   
+  cancelAIWork();
   if (aiEnabled && currentPlayer === aiPlayer) {
-    // Clear any pending AI moves and reset flags
-    if (window.aiMoveTimeout) {
-        clearTimeout(window.aiMoveTimeout);
-    }
-    window.aiThinking = false;
     window.aiMoveTimeout = setTimeout(makeAIMove, 500);
   }
 }
@@ -1475,6 +1523,7 @@ function showWinMessage(winner) {
 // --- INITIALIZATION ---
 
 window.addEventListener('load', () => {
+    initAIWorker();
     const board = document.getElementById("game-board");
     initializeBoard(board);
     updateCurrentPlayerDisplay();
@@ -1491,12 +1540,8 @@ window.addEventListener('load', () => {
         aiEnabled = !aiEnabled;
         window.aiEnabled = aiEnabled; // Also update global variable
         updateAIDisplay();
+        cancelAIWork();
         if (aiEnabled && currentPlayer === aiPlayer) {
-            // Clear any pending AI moves and reset flags
-            if (window.aiMoveTimeout) {
-                clearTimeout(window.aiMoveTimeout);
-            }
-            window.aiThinking = false;
             window.aiMoveTimeout = setTimeout(makeAIMove, 300);
         }
     });
@@ -1573,11 +1618,8 @@ window.addEventListener('load', () => {
         aiEnabled = this.checked;
         window.aiEnabled = aiEnabled;
         updateAIDisplay();
+        cancelAIWork();
         if (aiEnabled && currentPlayer === aiPlayer) {
-            if (window.aiMoveTimeout) {
-                clearTimeout(window.aiMoveTimeout);
-            }
-            window.aiThinking = false;
             window.aiMoveTimeout = setTimeout(makeAIMove, 300);
         }
     });
@@ -1805,11 +1847,7 @@ function setupAndPlayScenario(scenarioConfig) {
     const originalAIEnabled = aiEnabled;
     aiEnabled = false;
     window.aiEnabled = false;
-    if (window.aiMoveTimeout) {
-        clearTimeout(window.aiMoveTimeout);
-    }
-    window.aiThinking = false;
-    updateAIDisplay();
+    cancelAIWork();
     
     // Reset game to a clean state
     resetGame();
