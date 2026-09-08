@@ -1,10 +1,20 @@
-const cacheName = 'dam-haji-cache-v4';
+const cacheName = 'dam-haji-cache-v5';
 const staticAssets = [
   'index.html',
   'style.css',
+  'game.js',
+  'ai.js',
   'script.js',
+  'ui-v2.js',
+  'integration-v2.js',
+  'notifications.js',
+  'menu-system.js',
+  'settings-system.js',
+  'history-system.js',
   'manifest.json',
-  'favicon.ico'
+  'favicon.ico',
+  'icon-192.png',
+  'icon-512.png'
 ];
 
 self.addEventListener('install', async () => {

@@ -473,10 +473,21 @@ class GameUIIntegration {
         // Initialize the game board with existing logic
         const board = document.getElementById("game-board");
         if (board) {
-            initializeBoard(board);
-            board.querySelectorAll('.board-cell').forEach(square => {
-                square.addEventListener('click', handleClick);
-            });
+            // Idempotent: this runs on a delayed timer and can fire AFTER an
+            // auto-save restore already rebuilt the board. Never wipe a live game.
+            const hasLiveGame = board.querySelector('.piece') !== null
+                || (typeof gameStates !== 'undefined' && gameStates.length > 0);
+            if (!hasLiveGame) {
+                initializeBoard(board);
+                board.querySelectorAll('.board-cell').forEach(square => {
+                    square.addEventListener('click', handleClick);
+                });
+
+                // Initialize game state tracking
+                if (typeof saveGameState === 'function') {
+                    saveGameState();
+                }
+            }
             
             // Update initial UI state
             updateCurrentPlayerDisplay();
@@ -484,10 +495,6 @@ class GameUIIntegration {
             // Don't call updateAIDisplay here to prevent cascade
             // updateAIDisplay();
             
-            // Initialize game state tracking
-            if (typeof saveGameState === 'function') {
-                saveGameState();
-            }
             if (typeof updateUndoRedoButtons === 'function') {
                 updateUndoRedoButtons();
             }

@@ -581,6 +581,20 @@ function stopAutoSave() {
     }
 }
 
+// Flush a snapshot immediately when the app goes to background — the 30s
+// interval alone can lose recent moves, and a killed page never runs timers.
+// localStorage is synchronous, so this persists reliably on the way out.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && gameStates.length > 0) {
+        autoSaveGame();
+    }
+});
+window.addEventListener('pagehide', () => {
+    if (typeof gameStates !== 'undefined' && gameStates.length > 0) {
+        autoSaveGame();
+    }
+});
+
 function autoSaveGame() {
     try {
         const autoSaveData = new GameSaveData(gameStates[currentStateIndex], {
@@ -632,6 +646,9 @@ function showAutoSaveRecoveryDialog(saveData) {
         whiteScore = saveData.metadata.whiteScore;
         aiEnabled = saveData.metadata.aiEnabled;
         aiDifficulty = saveData.metadata.aiDifficulty;
+        moveHistory = [...(saveData.gameState.moveHistory || [])];
+        currentMoveIndex = moveHistory.length - 1;
+        window.moveHistory = moveHistory;
         
         // Update UI to reflect restored state
         updateScore();
@@ -675,6 +692,7 @@ function showAutoSaveRecoveryDialog(saveData) {
             square.addEventListener('click', handleClick);
         });
         updateCurrentPlayerDisplay();
+        updateMoveHistoryDisplay();
         updateAIDisplay();
         showNotification('Auto-saved game restored', 'success');
         
