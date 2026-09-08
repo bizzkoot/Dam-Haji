@@ -13,12 +13,16 @@ class SettingsSystem {
             animations: true,
             aiEnabled: false,
             aiDifficulty: 'medium',
-            showDebugButton: false
+            showDebugButton: false,
+            keepScreenAwake: true
         };
+
+        this.wakeLockSentinel = null;
 
         this.loadSettings();
         this.initializeEventListeners();
         this.applySettings();
+        this.initWakeLock();
     }
 
     initializeEventListeners() {
@@ -70,7 +74,23 @@ class SettingsSystem {
             });
         }
 
-        // Listen for settings panel opens to refresh display
+        // Keep screen awake toggle
+        const keepAwakeToggle = document.getElementById('keep-awake-toggle');
+        if (keepAwakeToggle) {
+            keepAwakeToggle.addEventListener('change', (e) => {
+                this.updateSetting('keepScreenAwake', e.target.checked);
+            });
+        }
+
+        // Re-acquire wake lock when returning to foreground (browser auto-releases in background)
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                this.requestWakeLock();
+            }
+        });
+
+        // Retry once on first interaction (some browsers require a user gesture)
+        document.addEventListener('click', () => this.requestWakeLock(), { once: true });
         document.addEventListener('panelOpened', (e) => {
             if (e.detail.panelId === 'settings-panel') {
                 this.refreshSettingsDisplay();
@@ -132,6 +152,9 @@ class SettingsSystem {
                 break;
             case 'animations':
                 this.applyAnimations(value);
+                break;
+            case 'keepScreenAwake':
+                this.applyKeepScreenAwake(value);
                 break;
             case 'showDebugButton':
                 this.applyShowDebugButton(value);
@@ -208,6 +231,49 @@ class SettingsSystem {
         }
     }
 
+    // Screen Wake Lock: keeps screen on while app is in foreground.
+    // No-op on browsers without support ("compatible devices" only).
+    static get wakeLockSupported() {
+        return 'wakeLock' in navigator;
+    }
+
+    initWakeLock() {
+        this.requestWakeLock();
+    }
+
+    async requestWakeLock() {
+        if (!this.settings.keepScreenAwake) return;
+        if (!SettingsSystem.wakeLockSupported) return;
+        if (document.visibilityState !== 'visible') return;
+        if (this.wakeLockSentinel && !this.wakeLockSentinel.released) return;
+        try {
+            this.wakeLockSentinel = await navigator.wakeLock.request('screen');
+            this.wakeLockSentinel.addEventListener('release', () => {
+                this.wakeLockSentinel = null;
+                this.requestWakeLock();
+            });
+        } catch (error) {
+            this.wakeLockSentinel = null;
+        }
+    }
+
+    async releaseWakeLock() {
+        try {
+            await this.wakeLockSentinel?.release();
+        } catch (error) {
+            // Already released (e.g. tab went to background) — nothing to do
+        }
+        this.wakeLockSentinel = null;
+    }
+
+    applyKeepScreenAwake(enabled) {
+        if (enabled) {
+            this.requestWakeLock();
+        } else {
+            this.releaseWakeLock();
+        }
+    }
+
     applyShowDebugButton(show) {
         const debugBtn = document.getElementById('debug-main-btn');
         if (debugBtn) {
@@ -246,6 +312,16 @@ class SettingsSystem {
             animationsToggle.checked = this.settings.animations;
         }
 
+        // Update keep screen awake toggle (disabled when Wake Lock API unsupported)
+        const keepAwakeToggle = document.getElementById('keep-awake-toggle');
+        if (keepAwakeToggle) {
+            keepAwakeToggle.checked = this.settings.keepScreenAwake;
+            keepAwakeToggle.disabled = !SettingsSystem.wakeLockSupported;
+            keepAwakeToggle.title = SettingsSystem.wakeLockSupported
+                ? ''
+                : 'Not supported on this device/browser';
+        }
+
         // Update debug toggle
         const debugToggle = document.getElementById('debug-toggle');
         if (debugToggle) {
@@ -260,6 +336,7 @@ class SettingsSystem {
             boardTheme: 'Board Theme',
             soundEffects: 'Sound Effects',
             animations: 'Animations',
+            keepScreenAwake: 'Keep Screen Awake',
             showDebugButton: 'Show Debug Button'
         };
         return displayNames[key] || key;
@@ -292,7 +369,8 @@ class SettingsSystem {
             animations: true,
             aiEnabled: false,
             aiDifficulty: 'medium',
-            showDebugButton: false
+            showDebugButton: false,
+            keepScreenAwake: true
         };
 
         this.settings = { ...defaultSettings };
