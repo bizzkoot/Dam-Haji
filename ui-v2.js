@@ -401,35 +401,66 @@ class ModernUI {
     // --- START: New Layout Engine ---
     
     setStaticMobileLayout() {
+        const gameInfo = document.getElementById('mobile-game-info');
         if (window.innerWidth > 768) {
-            const gameInfo = document.getElementById('mobile-game-info');
-            if (gameInfo) gameInfo.style.height = '';
+            if (gameInfo) gameInfo.classList.remove('hidden');
             return;
         }
+        if (!gameInfo) return;
+
         requestAnimationFrame(() => {
-            const topNav = document.getElementById('top-nav');
+            const gameArea = document.getElementById('game-area');
             const aiControls = document.getElementById('mobile-ai-controls');
             const actionButtons = document.getElementById('mobile-action-buttons');
             const boardContainer = document.getElementById('board-container');
-            const gameInfo = document.getElementById('mobile-game-info');
-            if (!topNav || !aiControls || !actionButtons || !boardContainer || !gameInfo) return;
-            const viewportHeight = window.innerHeight;
-            const topNavHeight = topNav.offsetHeight;
-            const aiControlsHeight = aiControls.offsetHeight + 8;
-            const actionButtonsHeight = actionButtons.offsetHeight + 16;
-            const boardHeight = boardContainer.offsetWidth;
-            const remainingHeight = viewportHeight - (topNavHeight + aiControlsHeight + boardHeight + actionButtonsHeight);
-            const minHeight = 60;
-            gameInfo.style.height = `${Math.max(remainingHeight, minHeight)}px`;
+            const gameBoard = document.getElementById('game-board');
+            if (!gameArea || !aiControls || !actionButtons || !boardContainer) return;
+
+            const outerHeight = (element) => {
+                const styles = getComputedStyle(element);
+                const marginTop = parseFloat(styles.marginTop) || 0;
+                const marginBottom = parseFloat(styles.marginBottom) || 0;
+                return element.getBoundingClientRect().height + marginTop + marginBottom;
+            };
+
+            // Measure the layout viewport used by CSS instead of a potentially zoomed visual viewport.
+            const availableHeight = gameArea.clientHeight || window.innerHeight;
+            const fixedHeight = outerHeight(aiControls) + outerHeight(actionButtons);
+            const boardSpace = Math.max(0, availableHeight - fixedHeight);
+            const containerWidth = Math.max(0, boardContainer.clientWidth - 8); // board padding
+
+            let boardScale = 0.9;
+            if (gameBoard?.classList.contains('board-small')) boardScale = 0.8;
+            if (gameBoard?.classList.contains('board-large')) boardScale = 1;
+
+            // CSS owns the board size; this only decides whether optional info can fit.
+            const boardSize = Math.min(containerWidth, boardSpace) * boardScale;
+            const infoSpace = boardSpace - boardSize;
+            const minimumInfoHeight = 110;
+            const showBuffer = gameInfo.classList.contains('hidden') ? 16 : 0;
+            gameInfo.classList.toggle('hidden', infoSpace < minimumInfoHeight + showBuffer);
         });
     }
 
     initLayoutEngine() {
         this.setStaticMobileLayout();
         let resizeTimeout;
-        window.addEventListener('resize', () => {
+        const handleResize = () => {
             clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => this.setStaticMobileLayout(), 100);
+            resizeTimeout = setTimeout(() => this.setStaticMobileLayout(), 60);
+        };
+
+        window.addEventListener('resize', handleResize);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleResize);
+        }
+        window.addEventListener('orientationchange', handleResize);
+
+        // Recalculate layout when board size or theme settings change
+        document.addEventListener('settingChanged', (e) => {
+            if (e.detail && e.detail.key === 'boardSize') {
+                handleResize();
+            }
         });
     }
     
