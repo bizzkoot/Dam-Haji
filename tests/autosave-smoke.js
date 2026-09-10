@@ -493,6 +493,19 @@ runInApp('loadGameFromSlot(0);');
 check('slot load restores position', cellAt(3, 0).firstChild !== null && cellAt(3, 0).firstChild.classList.contains('black'));
 check('slot load mirrors autosave for restart-prompt', readAutosave() !== null);
 
+// --- AI preference persistence (difficulty + on/off survive a restart) ----
+runInApp("aiDifficulty = 'legendary'; aiEnabled = true; saveAiPrefs();");
+check('ai prefs written to storage', storage.has('dam_haji_ai_prefs'));
+check('ai prefs restored: difficulty + enabled', runInApp(
+    "aiDifficulty = 'medium'; aiEnabled = false; loadAiPrefs();" +
+    "aiDifficulty === 'legendary' && aiEnabled === true"
+) === true);
+check('corrupt ai prefs do not crash and keep values', runInApp(
+    "localStorage.setItem('dam_haji_ai_prefs', 'not json');" +
+    "aiDifficulty = 'hard'; aiEnabled = true; loadAiPrefs();" +
+    "aiDifficulty === 'hard' && aiEnabled === true"
+) === true);
+
 // ---------------------------------------------------------------------------
 
 console.log(`\n${passed} passed, ${failed} failed`);

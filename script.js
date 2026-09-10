@@ -10,6 +10,21 @@ let whiteScore = 0;
 let aiEnabled = false;
 let aiDifficulty = "medium";
 let aiPlayer = "W";
+
+// Persist AI preferences (difficulty + on/off) across app launches
+function saveAiPrefs() {
+    try {
+        localStorage.setItem('dam_haji_ai_prefs', JSON.stringify({ enabled: aiEnabled, difficulty: aiDifficulty }));
+    } catch (error) { /* storage unavailable - prefs just won't persist */ }
+}
+
+function loadAiPrefs() {
+    try {
+        const prefs = JSON.parse(localStorage.getItem('dam_haji_ai_prefs') || '{}');
+        if (typeof prefs.enabled === 'boolean') aiEnabled = prefs.enabled;
+        if (['easy', 'medium', 'hard', 'legendary'].includes(prefs.difficulty)) aiDifficulty = prefs.difficulty;
+    } catch (error) { /* keep defaults on parse errors */ }
+}
 let gameReviewMode = false;
 let movesSinceCapture = 0;
 let gameIsOver = false; // True once a win/draw modal is shown — stops autosave of finished games
@@ -1605,6 +1620,7 @@ window.addEventListener('load', () => {
     document.getElementById('ai-toggle').addEventListener('click', () => {
         aiEnabled = !aiEnabled;
         window.aiEnabled = aiEnabled; // Also update global variable
+        saveAiPrefs();
         updateAIDisplay();
         cancelAIWork();
         if (aiEnabled && currentPlayer === aiPlayer) {
@@ -1633,56 +1649,36 @@ window.addEventListener('load', () => {
         if (level === 'legendary' && btnMobileLegend) btnMobileLegend.classList.add('active');
     };
 
-    // Initialize correct active difficulty on load
-    setActiveDifficultyButton(aiDifficulty);
+    // Single funnel for difficulty changes - keeps buttons, display and
+    // persisted prefs in sync
+    const setAiDifficulty = (level) => {
+        aiDifficulty = level;
+        saveAiPrefs();
+        updateAIDisplay();
+        setActiveDifficultyButton(level);
+    };
 
-    document.getElementById('ai-easy').addEventListener('click', () => {
-        aiDifficulty = 'easy';
-        updateAIDisplay();
-        setActiveDifficultyButton('easy');
-    });
-    document.getElementById('ai-medium').addEventListener('click', () => {
-        aiDifficulty = 'medium';
-        updateAIDisplay();
-        setActiveDifficultyButton('medium');
-    });
-    document.getElementById('ai-hard').addEventListener('click', () => {
-        aiDifficulty = 'hard';
-        updateAIDisplay();
-        setActiveDifficultyButton('hard');
-    });
-    document.getElementById('ai-legendary').addEventListener('click', () => {
-        aiDifficulty = 'legendary';
-        updateAIDisplay();
-        setActiveDifficultyButton('legendary');
-    });
+    // Restore the AI options from the last launch, then sync all UI
+    loadAiPrefs();
+    setActiveDifficultyButton(aiDifficulty);
+    updateAIDisplay();
+
+    document.getElementById('ai-easy').addEventListener('click', () => setAiDifficulty('easy'));
+    document.getElementById('ai-medium').addEventListener('click', () => setAiDifficulty('medium'));
+    document.getElementById('ai-hard').addEventListener('click', () => setAiDifficulty('hard'));
+    document.getElementById('ai-legendary').addEventListener('click', () => setAiDifficulty('legendary'));
 
     // Mobile difficulty buttons
-    document.getElementById('mobile-ai-easy').addEventListener('click', () => {
-        aiDifficulty = 'easy';
-        updateAIDisplay();
-        setActiveDifficultyButton('easy');
-    });
-    document.getElementById('mobile-ai-medium').addEventListener('click', () => {
-        aiDifficulty = 'medium';
-        updateAIDisplay();
-        setActiveDifficultyButton('medium');
-    });
-    document.getElementById('mobile-ai-hard').addEventListener('click', () => {
-        aiDifficulty = 'hard';
-        updateAIDisplay();
-        setActiveDifficultyButton('hard');
-    });
-    document.getElementById('mobile-ai-legendary').addEventListener('click', () => {
-        aiDifficulty = 'legendary';
-        updateAIDisplay();
-        setActiveDifficultyButton('legendary');
-    });
+    document.getElementById('mobile-ai-easy').addEventListener('click', () => setAiDifficulty('easy'));
+    document.getElementById('mobile-ai-medium').addEventListener('click', () => setAiDifficulty('medium'));
+    document.getElementById('mobile-ai-hard').addEventListener('click', () => setAiDifficulty('hard'));
+    document.getElementById('mobile-ai-legendary').addEventListener('click', () => setAiDifficulty('legendary'));
 
     // Mobile AI toggle (checkbox)
     document.getElementById('mobile-ai-switch').addEventListener('change', function() {
         aiEnabled = this.checked;
         window.aiEnabled = aiEnabled;
+        saveAiPrefs();
         updateAIDisplay();
         cancelAIWork();
         if (aiEnabled && currentPlayer === aiPlayer) {

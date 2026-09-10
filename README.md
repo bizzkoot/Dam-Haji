@@ -144,7 +144,8 @@ graph TD
 - **Restore Prompt**: When you close and reopen the app, it offers to restore the exact position from just before the close
 - **Decline to Start Fresh**: Declining the prompt (or finishing a game, or resetting) clears the saved snapshot
 - **Save Slots**: Manual save/load slots mirror the same in-progress snapshot behavior
-- **Force Refresh**: Settings → App → **Force Refresh App** clears all cached files (and the service worker), saves the current game, and reloads — use this if the app ever looks out of date or misbehaves
+- **Force Refresh**: Settings → App → **Force Refresh App** clears all cached files (and the service worker), saves the current game, and reloads — use this if the app ever looks out of date or misbehaves (two-tap confirm, works in standalone mode)
+- **AI preferences persist**: the chosen AI difficulty and AI on/off toggle are saved automatically and restored on the next app start (settings-panel items like theme/sound were already persisted)
 
 ### Win Conditions
 - **Capture All Opponent Pieces**: Eliminate all enemy pieces
