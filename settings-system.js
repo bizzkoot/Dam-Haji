@@ -84,10 +84,26 @@ class SettingsSystem {
 
         // Force refresh: purge caches + service worker, save the current
         // game, then reload. Recovery path for stale/cached app versions.
+        // Two-tap confirm instead of confirm() — native dialogs can be
+        // suppressed in standalone PWAs (notably iOS), making the button
+        // look dead.
         const forceRefreshBtn = document.getElementById('force-refresh-btn');
         if (forceRefreshBtn) {
+            let refreshArmed = false;
+            let refreshArmTimer = null;
+            const disarmRefresh = () => {
+                refreshArmed = false;
+                if (refreshArmTimer) clearTimeout(refreshArmTimer);
+                forceRefreshBtn.textContent = 'Force Refresh App';
+            };
             forceRefreshBtn.addEventListener('click', () => {
-                if (!confirm('Force refresh the app? Cached files will be cleared and the app reloaded. Your game in progress is saved first.')) return;
+                if (!refreshArmed) {
+                    refreshArmed = true;
+                    forceRefreshBtn.textContent = 'Tap Again to Confirm';
+                    refreshArmTimer = setTimeout(disarmRefresh, 3000);
+                    return;
+                }
+                disarmRefresh();
                 if (typeof window.autoSaveGame === 'function') window.autoSaveGame();
                 const reload = () => window.location.reload();
                 const purge = [];
