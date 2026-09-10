@@ -415,5 +415,16 @@
   <script src="settings-system.js"></script>
   <script src="history-system.js"></script>
   <!-- <script src="enhanced-integration.js"></script> DISABLED: causes recursive function overrides -->
+
+  <script>
+    // PWA offline support + update delivery. Without this registration the
+    // service worker never activates and installed apps never cache/update.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .catch(err => console.warn('Service worker registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>

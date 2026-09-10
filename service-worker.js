@@ -23,6 +23,9 @@ const staticAssets = [
 self.addEventListener('install', async () => {
   const cache = await caches.open(cacheName);
   await cache.addAll(staticAssets);
+  // Apply updates on the next launch instead of waiting for every client
+  // to close — otherwise users can run stale code for extra sessions.
+  await self.skipWaiting();
   console.log('Service worker: Caching static assets');
 });
 
@@ -52,6 +55,6 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
