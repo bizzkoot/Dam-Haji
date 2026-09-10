@@ -645,6 +645,15 @@ function checkForAutoSave() {
             const now = new Date();
             const hoursSinceSave = (now - saveDate) / (1000 * 60 * 60);
             
+            // A snapshot with no moves is the initial position — restoring it
+            // is a no-op. This also cleans up stale snapshots written by
+            // older builds before per-move saving existed.
+            const savedMoves = saveData.gameState && saveData.gameState.moveHistory;
+            if (!savedMoves || savedMoves.length === 0) {
+                localStorage.removeItem('dam_haji_autosave');
+                return;
+            }
+            
             if (hoursSinceSave < 24) { // Only offer recovery for saves less than 24 hours old
                 showAutoSaveRecoveryDialog(saveData);
             } else {
