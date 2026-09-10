@@ -1,9 +1,12 @@
-const cacheName = 'dam-haji-cache-v5';
+// Bump the cache version on EVERY change to cached assets — the cache-first
+// strategy serves stale scripts to installed PWAs otherwise.
+const cacheName = 'dam-haji-cache-v6';
 const staticAssets = [
   'index.html',
   'style.css',
   'game.js',
   'ai.js',
+  'ai-worker.js',
   'script.js',
   'ui-v2.js',
   'integration-v2.js',

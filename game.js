@@ -36,14 +36,37 @@ class GameMove {
         this.player = piece.classList.contains('black') ? 'B' : 'W';
         this.moveNumber = moveHistory.length + 1;
     }
+    
+    // Persist plain data only: `piece` and `capturedPieces` hold live DOM
+    // elements, which make JSON.stringify throw (circular structure) and
+    // silently kill every save path. Restored moves only need the fields
+    // below for the move-history display and turn bookkeeping.
+    toJSON() {
+        return {
+            player: this.player,
+            moveNumber: this.moveNumber,
+            startRow: this.startRow,
+            startCol: this.startCol,
+            endRow: this.endRow,
+            endCol: this.endCol,
+            isCapture: this.isCapture,
+            capturedPieces: (this.capturedPieces || []).map(p => ({
+                color: p.classList && p.classList.contains('white') ? 'white' : 'black',
+            })),
+            isHajiPromotion: this.isHajiPromotion,
+            timestamp: this.timestamp
+        };
+    }
 }
 
 class GameState {
-    constructor(boardState, currentPlayer, scores, moveHistory) {
+    // movesSinceCapture is optional so older saves without it still load (defaults to 0)
+    constructor(boardState, currentPlayer, scores, moveHistory, movesSinceCapture = 0) {
         this.boardState = this.serializeBoard();
         this.currentPlayer = currentPlayer;
         this.scores = { ...scores };
         this.moveHistory = [...moveHistory];
+        this.movesSinceCapture = movesSinceCapture;
         this.timestamp = Date.now();
     }
     

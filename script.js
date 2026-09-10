@@ -12,6 +12,7 @@ let aiDifficulty = "medium";
 let aiPlayer = "W";
 let gameReviewMode = false;
 let movesSinceCapture = 0;
+let gameIsOver = false; // True once a win/draw modal is shown — stops autosave of finished games
 const MAX_MOVES_WITHOUT_CAPTURE = 50;
 let detailedDebugLoggingEnabled = false;
 
@@ -151,7 +152,7 @@ function saveGameState() {
     // Remove states after current index
     gameStates = gameStates.slice(0, currentStateIndex + 1);
     
-    const newState = new GameState(null, currentPlayer, { blackScore, whiteScore }, moveHistory);
+    const newState = new GameState(null, currentPlayer, { blackScore, whiteScore }, moveHistory, movesSinceCapture);
     
     gameStates.push(newState);
     currentStateIndex = gameStates.length - 1;
@@ -466,6 +467,14 @@ function loadGameFromSlot(slotNumber) {
         aiEnabled = saveData.metadata.aiEnabled;
         aiDifficulty = saveData.metadata.aiDifficulty;
         
+        // Restore move history and turn counter so the loaded game is fully
+        // continuable (and the autosave mirror treats it as in-progress).
+        moveHistory = [...(saveData.gameState.moveHistory || [])];
+        currentMoveIndex = moveHistory.length - 1;
+        window.moveHistory = moveHistory;
+        movesSinceCapture = saveData.gameState.movesSinceCapture || 0;
+        gameIsOver = false;
+        
         // Update UI to reflect restored state
         updateScore();
         
@@ -510,6 +519,8 @@ function loadGameFromSlot(slotNumber) {
         
         // Update UI
         updateCurrentPlayerDisplay();
+        updateMoveHistoryDisplay();
+        updateUndoRedoButtons();
         updateAIDisplay();
         updateSaveLoadUI();
         
@@ -519,6 +530,10 @@ function loadGameFromSlot(slotNumber) {
         if (window.settingsSystem) {
             window.settingsSystem.applyShowCoordinates(window.settingsSystem.getSetting('showCoordinates'));
         }
+        
+        // Mirror the loaded game into the autosave so closing the app right
+        // after a slot load still restores THIS game on the next launch.
+        autoSaveGame();
         
         // Handle AI start/reset if loaded state is AI's turn
         cancelAIWork();
@@ -558,45 +573,44 @@ function deleteSavedGame(slotNumber) {
     }
 }
 
-// Auto-save functionality
-let autoSaveInterval = null;
-const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
+// --- AUTO-SAVE (single authoritative save path) ---
+//
+// Save strategy:
+// 1. autoSaveGame() runs immediately after EVERY completed turn (user or AI)
+//    — called from executeMove right after saveGameState().
+// 2. As a belt-and-braces flush, it also runs when the app goes to the
+//    background (visibilitychange/pagehide). A killed page never runs timers,
+//    so per-move saving is what guarantees the last position survives.
+// 3. There is deliberately NO interval timer: per-move saving makes it
+//    redundant, and a timer can write stale snapshots over fresh ones.
+//
+// localStorage is synchronous, so these writes persist reliably.
 
-function startAutoSave() {
-    if (autoSaveInterval) {
-        clearInterval(autoSaveInterval);
-    }
-    
-    autoSaveInterval = setInterval(() => {
-        if (gameStates.length > 0) {
-            autoSaveGame();
-        }
-    }, AUTO_SAVE_INTERVAL);
+function isGameInProgress() {
+    return !gameIsOver && gameStates.length > 0 && moveHistory.length > 0;
 }
 
-function stopAutoSave() {
-    if (autoSaveInterval) {
-        clearInterval(autoSaveInterval);
-        autoSaveInterval = null;
-    }
-}
-
-// Flush a snapshot immediately when the app goes to background — the 30s
-// interval alone can lose recent moves, and a killed page never runs timers.
-// localStorage is synchronous, so this persists reliably on the way out.
 document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && gameStates.length > 0) {
+    if (document.visibilityState === 'hidden' && isGameInProgress()) {
         autoSaveGame();
     }
 });
 window.addEventListener('pagehide', () => {
-    if (typeof gameStates !== 'undefined' && gameStates.length > 0) {
+    if (typeof isGameInProgress === 'function' && isGameInProgress()) {
         autoSaveGame();
     }
 });
 
 function autoSaveGame() {
     try {
+        // Only autosave a real in-progress game. A fresh/reset or finished
+        // game must never trigger a restore prompt on the next launch —
+        // drop any stale snapshot instead of writing a bogus one.
+        if (!isGameInProgress()) {
+            clearAutoSave();
+            return;
+        }
+        
         const autoSaveData = new GameSaveData(gameStates[currentStateIndex], {
             slotNumber: -1, // Auto-save slot
             currentPlayer,
@@ -611,6 +625,14 @@ function autoSaveGame() {
         localStorage.setItem('dam_haji_autosave', JSON.stringify(autoSaveData));
     } catch (error) {
         console.error('Auto-save failed:', error);
+    }
+}
+
+function clearAutoSave() {
+    try {
+        localStorage.removeItem('dam_haji_autosave');
+    } catch (error) {
+        console.error('Clearing auto-save failed:', error);
     }
 }
 
@@ -649,6 +671,8 @@ function showAutoSaveRecoveryDialog(saveData) {
         moveHistory = [...(saveData.gameState.moveHistory || [])];
         currentMoveIndex = moveHistory.length - 1;
         window.moveHistory = moveHistory;
+        movesSinceCapture = saveData.gameState.movesSinceCapture || 0;
+        gameIsOver = false;
         
         // Update UI to reflect restored state
         updateScore();
@@ -693,6 +717,7 @@ function showAutoSaveRecoveryDialog(saveData) {
         });
         updateCurrentPlayerDisplay();
         updateMoveHistoryDisplay();
+        updateUndoRedoButtons();
         updateAIDisplay();
         showNotification('Auto-saved game restored', 'success');
         
@@ -1293,6 +1318,10 @@ function executeMove(move) {
         updateCurrentPlayerDisplay();
         // Phase 1: Save game state for undo/redo after turn is complete
         saveGameState();
+        // Persist the completed turn immediately — the user or AI just moved,
+        // so the last position must survive an app close without relying on
+        // close-time events (which never fire if the OS kills the page).
+        autoSaveGame();
         if (!checkWinCondition() && aiEnabled && currentPlayer === aiPlayer) {
             // Clear any pending AI moves to prevent stacking
             cancelAIWork();
@@ -1466,6 +1495,7 @@ function resetGame() {
   blackScore = 0;
   whiteScore = 0;
   movesSinceCapture = 0;
+  gameIsOver = false;
   updateScore();
   updateCurrentPlayerDisplay();
   updateAIDisplay();
@@ -1475,6 +1505,10 @@ function resetGame() {
   currentMoveIndex = -1;
   gameStates = [];
   currentStateIndex = -1;
+  
+  // A reset discards the game deliberately — drop the autosave so the next
+  // launch doesn't prompt to restore a game that no longer exists.
+  clearAutoSave();
   
   // Update window.moveHistory as well
   window.moveHistory = moveHistory;
@@ -1505,6 +1539,11 @@ function resetGame() {
 function showWinMessage(winner) {
   const winModal = document.getElementById('win-modal');
   const winMessage = document.getElementById('win-message');
+  
+  // The game is finished — stop autosaving and drop any snapshot so the
+  // next launch doesn't prompt to restore a completed game.
+  gameIsOver = true;
+  clearAutoSave();
   
   // Clear any existing animation classes
   winModal.classList.remove('win-animation-black', 'win-animation-white');
@@ -1675,11 +1714,10 @@ window.addEventListener('load', () => {
     // Phase 1: Initialize Phase 1 features
     initializePhase1Features();
     
-    // Phase 1: Check for auto-save recovery
+    // Phase 1: Check for auto-save recovery and prompt the user to restore.
+    // Snapshot writes happen per completed move (see autoSaveGame), so this
+    // always sees the exact position from just before the app closed.
     checkForAutoSave();
-    
-    // Phase 1: Start auto-save
-    startAutoSave();
 });
 
 // Debug function to set up a Haji capture test scenario

@@ -268,12 +268,19 @@ class GameUIIntegration {
             blackScore = 0;
             whiteScore = 0;
             movesSinceCapture = 0;
+            gameIsOver = false;
             
             // Reset move history and game states
             moveHistory = [];
             currentMoveIndex = -1;
             gameStates = [];
             currentStateIndex = -1;
+            
+            // A reset discards the game deliberately — drop the autosave so
+            // the next launch doesn't prompt to restore a nonexistent game.
+            if (typeof clearAutoSave === 'function') {
+                clearAutoSave();
+            }
             
             // Update window.moveHistory as well
             window.moveHistory = moveHistory;

@@ -139,10 +139,26 @@ graph TD
 - **Deselect**: Click selected piece again to deselect
 - **Reset Game**: Use the reset button to start a new game
 
+### Auto-Save & Restore
+- **Per-Move Saving**: Every completed move (yours or the AI's) is saved to local storage immediately
+- **Restore Prompt**: When you close and reopen the app, it offers to restore the exact position from just before the close
+- **Decline to Start Fresh**: Declining the prompt (or finishing a game, or resetting) clears the saved snapshot
+- **Save Slots**: Manual save/load slots mirror the same in-progress snapshot behavior
+
 ### Win Conditions
 - **Capture All Opponent Pieces**: Eliminate all enemy pieces
 - **Block Opponent**: Leave opponent with no legal moves
 - **Draw**: No captures for 50 consecutive moves
+
+## 🧪 Development
+
+Run the persistence smoke test (no dependencies) after touching save/restore code:
+
+```bash
+node tests/autosave-smoke.js
+```
+
+It loads the real `game.js` + `script.js` in a minimal DOM stub and verifies the save → close → restore contract end to end.
 
 ## 🚀 PWA Features
 
