@@ -82,6 +82,25 @@ class SettingsSystem {
             });
         }
 
+        // Force refresh: purge caches + service worker, save the current
+        // game, then reload. Recovery path for stale/cached app versions.
+        const forceRefreshBtn = document.getElementById('force-refresh-btn');
+        if (forceRefreshBtn) {
+            forceRefreshBtn.addEventListener('click', () => {
+                if (!confirm('Force refresh the app? Cached files will be cleared and the app reloaded. Your game in progress is saved first.')) return;
+                if (typeof window.autoSaveGame === 'function') window.autoSaveGame();
+                const reload = () => window.location.reload();
+                const purge = [];
+                if (window.caches && caches.keys) {
+                    purge.push(caches.keys().then(keys => Promise.all(keys.map(key => caches.delete(key)))));
+                }
+                if (navigator.serviceWorker) {
+                    purge.push(navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(reg => reg.unregister())));
+                }
+                Promise.all(purge).then(reload, reload);
+            });
+        }
+
         // Re-acquire wake lock when returning to foreground (browser auto-releases in background)
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') {
